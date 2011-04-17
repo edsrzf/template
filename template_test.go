@@ -29,7 +29,7 @@ var templateTests = []templateTest{
 	templateTest{"{{ 1 }} {{ 2 }}", nil, "1 2"},
 	templateTest{"{{ var }}", Context{"var": "hello"}, "hello"},
 	templateTest{" {{ var }}", Context{"var": []int{1, 2, 3}}, " [1, 2, 3]"},
-	templateTest{"{{ var }}", Context{"var": map[int]string{1: "one", 2: "two", 3: "three"}}, "{1: 'one', 2: 'two', 3: 'three'}"},
+	templateTest{"{{ var }}", Context{"var": map[int]string{1: "one"}}, "{1: 'one'}"},
 	templateTest{"{{ var.1 }}", Context{"var": "hello"}, "e"},
 	templateTest{"{{ var.0 }}", Context{"var": []int{14}}, "14"},
 	templateTest{"{{ var.13 }}", Context{"var": [14]int{13: 11}}, "11"},
