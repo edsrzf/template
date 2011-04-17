@@ -9,6 +9,7 @@ GOFILES=\
 	filter.go\
 	iftag.go\
 	lexer.go\
+	parser.go\
 	tag.go\
 	template.go\
 	value.go\

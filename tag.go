@@ -5,18 +5,6 @@ import (
 	"reflect"
 )
 
-type scope map[string]int
-
-func (s scope) Lookup(name string) int {
-	v, ok := s[name]
-	if ok {
-		return v
-	}
-	v = len(s)
-	s[name] = v
-	return v
-}
-
 type TagFunc func(p *parser) Renderer
 
 var tags = map[string]TagFunc{
