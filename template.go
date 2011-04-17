@@ -1,6 +1,7 @@
 package template
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -12,6 +13,14 @@ type Stack []value
 
 type Renderer interface {
 	Render(wr io.Writer, s Stack)
+}
+
+type RenderList []Renderer
+
+func (l RenderList) Render(wr io.Writer, s Stack) {
+	for _, r := range l {
+		r.Render(wr, s)
+	}
 }
 
 type printLit struct {
@@ -33,12 +42,8 @@ func (p *printVar) Render(wr io.Writer, s Stack) {
 }
 
 type Template struct {
-	scope  scope
-	nodes  []Renderer
-}
-
-func (t *Template) push(n Renderer) {
-	t.nodes = append(t.nodes, n)
+	scope scope
+	nodes RenderList
 }
 
 func (t *Template) Execute(wr io.Writer, c Context) {
@@ -50,9 +55,7 @@ func (t *Template) Execute(wr io.Writer, c Context) {
 			}
 		}
 	}
-	for _, node := range t.nodes {
-		node.Render(wr, s)
-	}
+	t.nodes.Render(wr, s)
 }
 
 type parser struct {
@@ -62,28 +65,55 @@ type parser struct {
 	s   scope
 }
 
+func (p *parser) Error(format string, args ...interface{}) {
+	panic(fmt.Sprintf(format, args...))
+}
+
 func (p *parser) next() {
 	p.tok, p.lit = p.l.scan()
 }
 
-func (p *parser) expect(tok token) {
+func (p *parser) expect(tok token) string {
 	if p.tok != tok {
-		panic("expected " + tokStrings[tok] + ", got " + tokStrings[p.tok])
+		p.Error("expected %s, got %s", tokStrings[tok], tokStrings[p.tok])
 	}
+	lit := p.lit
 	p.next()
+	return lit
+}
+
+// parse until one of the following tags
+func (p *parser) ParseUntil(tags ...string) (string, RenderList) {
+	r := make(RenderList, 0, 10)
+	for p.tok != tokEof {
+		switch p.tok {
+		case tokText:
+			r = append(r, &printLit{p.lit})
+			p.next()
+		case tokBlockTagStart:
+			p.expect(tokBlockTagStart)
+			for _, t := range tags {
+				if t == p.lit {
+					p.next()
+					return t, r
+				}
+			}
+			r = append(r, p.parseBlockTag())
+		case tokVarTagStart:
+			r = append(r, p.parseVarTag())
+		default:
+			p.Error("unexpected token %s", tokStrings[p.tok])
+		}
+	}
+	return "", r
 }
 
 func (p *parser) parseBlockTag() Renderer {
-	p.expect(tokBlockTagStart)
-	if p.tok != tokIdent {
-		// Use expect error handling
-		p.expect(tokIdent)
+	if tag, ok := tags[p.expect(tokIdent)]; ok {
+		return tag(p)
 	}
-	tag, ok := tags[p.lit]
-	if !ok {
-		panic("Tag isn't registered")
-	}
-	return tag(p)
+	p.Error("tag isn't registered")
+	return nil
 }
 
 func (p *parser) parseVarTag() Renderer {
@@ -100,14 +130,14 @@ func (p *parser) parseVar() valuer {
 	case tokInt:
 		i, err := strconv.Atoi64(p.lit)
 		if err != nil {
-			panic("Internal int error: " + err.String())
+			p.Error("internal int error: %s", err)
 		}
 		ret = intLit(i)
 		p.next()
 	case tokFloat:
 		f, err := strconv.Atof64(p.lit)
 		if err != nil {
-			panic("Internal float error: " + err.String())
+			p.Error("Internal float error: %s", err)
 		}
 		ret = floatLit(f)
 		p.next()
@@ -117,15 +147,14 @@ func (p *parser) parseVar() valuer {
 	case tokIdent:
 		ret = p.parseAttrVar()
 	default:
-		panic("Unexpected token " + tokStrings[p.tok])
+		p.Error("Unexpected token %s", tokStrings[p.tok])
 	}
 	return ret
 }
 
 func (p *parser) parseAttrVar() *variable {
 	var v variable
-	v.v = p.s.Lookup(p.lit)
-	p.expect(tokIdent)
+	v.v = p.s.Lookup(p.expect(tokIdent))
 	for p.tok == tokDot {
 		p.expect(tokDot)
 		v.attrs = append(v.attrs, p.lit)
@@ -144,7 +173,7 @@ func (p *parser) parseFilters() []*filter {
 		p.next()
 		rf, ok := filters[p.lit]
 		if !ok {
-			panic("Filter does not exist")
+			p.Error("filter does not exist")
 		}
 		p.expect(tokIdent)
 		var val valuer
@@ -156,7 +185,7 @@ func (p *parser) parseFilters() []*filter {
 			args = p.tok == tokArgument
 		case NoArg:
 			if p.tok == tokArgument {
-				panic("Filter accepts no arguments")
+				p.Error("filter accepts no arguments")
 			}
 		}
 		if args {
@@ -175,17 +204,7 @@ func Parse(s string) (*Template, os.Error) {
 	p := &parser{l: l, s: scope{}}
 
 	p.next()
-	for p.tok != tokEof {
-		switch p.tok {
-		case tokText:
-			t.push(&printLit{p.lit})
-			p.next()
-		case tokBlockTagStart:
-			t.push(p.parseBlockTag())
-		case tokVarTagStart:
-			t.push(p.parseVarTag())
-		}
-	}
+	_, t.nodes = p.ParseUntil()
 	t.scope = p.s
 
 	return t, nil

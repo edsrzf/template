@@ -5,21 +5,46 @@ import (
 )
 
 type ifTag struct {
-	cond     condition
+	cond     valuer
 	ifNode   Renderer
 	elseNode Renderer
 }
 
+func parseIf(p *parser) Renderer {
+	tag := new(ifTag)
+	tag.cond = parseCondition(p)
+	p.expect(tokBlockTagEnd)
+	var tok string
+	tok, tag.ifNode = p.ParseUntil("elif", "else", "endif")
+	for tok != "endif" {
+		switch tok {
+		case "elif":
+			tag.elseNode = parseIf(p)
+			return tag
+		case "else":
+			tok, tag.elseNode = p.ParseUntil("endif")
+		default:
+			p.Error("unterminated if tag")
+		}
+	}
+	p.expect(tokBlockTagEnd)
+	return tag
+}
+
 func (i *ifTag) Render(wr io.Writer, s Stack) {
-	if i.cond.eval(s) {
+	if b, _ := valueAsBool(i.cond.value(s)); b {
 		i.ifNode.Render(wr, s)
-	} else {
+	} else if i.elseNode != nil {
 		i.elseNode.Render(wr, s)
 	}
 }
 
 type condition interface {
 	eval(s Stack) bool
+}
+
+func parseCondition(p *parser) valuer {
+	return p.parseVar()
 }
 
 type equal struct {

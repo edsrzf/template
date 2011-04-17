@@ -20,12 +20,12 @@ type TagFunc func(p *parser) Renderer
 
 var tags = map[string]TagFunc{
 	"firstof": firstofTag,
+	"if":      parseIf,
 }
 
 type firstof []valuer
 
 func firstofTag(p *parser) Renderer {
-	p.expect(tokIdent)
 	var f firstof
 	for p.tok != tokBlockTagEnd {
 		v := p.parseVar()

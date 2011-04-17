@@ -269,7 +269,7 @@ func (v *variable) value(s Stack) value {
 	var ret value
 	switch val.(type) {
 	case bool, float32, float64, complex64, complex128, int, int8, int16, int32, int64,
-	     uint, uint8, uint16, uint32, uint64, uintptr, string:
+		uint, uint8, uint16, uint32, uint64, uintptr, string:
 		ret = val
 	}
 	if ret != nil {
