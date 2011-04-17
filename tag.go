@@ -19,23 +19,23 @@ func (s scope) Lookup(name string) int {
 type TagFunc func(p *parser) Renderer
 
 var tags = map[string]TagFunc{
-	"firstof": firstofTag,
+	"firstof": parseFirstof,
 	"if":      parseIf,
 }
 
-type firstof []valuer
+type firstofTag []valuer
 
-func firstofTag(p *parser) Renderer {
-	var f firstof
+func parseFirstof(p *parser) Renderer {
+	var f firstofTag
 	for p.tok != tokBlockTagEnd {
 		v := p.parseVar()
 		f = append(f, v)
 	}
-	p.expect(tokBlockTagEnd)
+	p.Expect(tokBlockTagEnd)
 	return f
 }
 
-func (f firstof) Render(wr io.Writer, s Stack) {
+func (f firstofTag) Render(wr io.Writer, s Stack) {
 	var v value
 	var b bool
 	for _, val := range f {

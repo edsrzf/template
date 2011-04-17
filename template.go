@@ -73,13 +73,20 @@ func (p *parser) next() {
 	p.tok, p.lit = p.l.scan()
 }
 
-func (p *parser) expect(tok token) string {
+func (p *parser) Expect(tok token) string {
 	if p.tok != tok {
 		p.Error("expected %s, got %s", tokStrings[tok], tokStrings[p.tok])
 	}
 	lit := p.lit
 	p.next()
 	return lit
+}
+
+func (p *parser) ExpectWord(word string) {
+	if p.tok != tokIdent || p.lit != word {
+		p.Error("expected ident %s, got token %s, %s", word, tokStrings[p.tok], p.lit)
+	}
+	p.next()
 }
 
 // parse until one of the following tags
@@ -91,7 +98,7 @@ func (p *parser) ParseUntil(tags ...string) (string, RenderList) {
 			r = append(r, &printLit{p.lit})
 			p.next()
 		case tokBlockTagStart:
-			p.expect(tokBlockTagStart)
+			p.Expect(tokBlockTagStart)
 			for _, t := range tags {
 				if t == p.lit {
 					p.next()
@@ -109,7 +116,7 @@ func (p *parser) ParseUntil(tags ...string) (string, RenderList) {
 }
 
 func (p *parser) parseBlockTag() Renderer {
-	if tag, ok := tags[p.expect(tokIdent)]; ok {
+	if tag, ok := tags[p.Expect(tokIdent)]; ok {
 		return tag(p)
 	}
 	p.Error("tag isn't registered")
@@ -117,10 +124,10 @@ func (p *parser) parseBlockTag() Renderer {
 }
 
 func (p *parser) parseVarTag() Renderer {
-	p.expect(tokVarTagStart)
+	p.Expect(tokVarTagStart)
 	v := p.parseVar()
 	f := p.parseFilters()
-	p.expect(tokVarTagEnd)
+	p.Expect(tokVarTagEnd)
 	return &printVar{&expr{v, f}}
 }
 
@@ -154,14 +161,14 @@ func (p *parser) parseVar() valuer {
 
 func (p *parser) parseAttrVar() *variable {
 	var v variable
-	v.v = p.s.Lookup(p.expect(tokIdent))
+	v.v = p.s.Lookup(p.Expect(tokIdent))
 	for p.tok == tokDot {
-		p.expect(tokDot)
+		p.Expect(tokDot)
 		v.attrs = append(v.attrs, p.lit)
 		if p.tok == tokInt {
-			p.expect(tokInt)
+			p.Expect(tokInt)
 		} else {
-			p.expect(tokIdent)
+			p.Expect(tokIdent)
 		}
 	}
 	return &v
@@ -175,7 +182,7 @@ func (p *parser) parseFilters() []*filter {
 		if !ok {
 			p.Error("filter does not exist")
 		}
-		p.expect(tokIdent)
+		p.Expect(tokIdent)
 		var val valuer
 		args := false
 		switch rf.arg {
@@ -189,7 +196,7 @@ func (p *parser) parseFilters() []*filter {
 			}
 		}
 		if args {
-			p.expect(tokArgument)
+			p.Expect(tokArgument)
 			val = p.parseVar()
 		}
 		f = append(f, &filter{rf.f, val})

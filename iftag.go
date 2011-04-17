@@ -13,7 +13,7 @@ type ifTag struct {
 func parseIf(p *parser) Renderer {
 	tag := new(ifTag)
 	tag.cond = parseCondition(p)
-	p.expect(tokBlockTagEnd)
+	p.Expect(tokBlockTagEnd)
 	var tok string
 	tok, tag.ifNode = p.ParseUntil("elif", "else", "endif")
 	for tok != "endif" {
@@ -27,7 +27,7 @@ func parseIf(p *parser) Renderer {
 			p.Error("unterminated if tag")
 		}
 	}
-	p.expect(tokBlockTagEnd)
+	p.Expect(tokBlockTagEnd)
 	return tag
 }
 
