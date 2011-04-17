@@ -29,16 +29,16 @@ type regFilter struct {
 }
 
 var filters = map[string]*regFilter{
-	"add":             &regFilter{addFilter, ReqArg},
-	"addslashes":      &regFilter{addslashesFilter, NoArg},
-	"capfirst":        &regFilter{capfirstFilter, NoArg},
-	"center":          &regFilter{centerFilter, ReqArg},
-	"cut":             &regFilter{cutFilter, ReqArg},
-	"default":         &regFilter{defaultFilter, ReqArg},
-	"default_if_nil":  &regFilter{defaultIfNilFilter, ReqArg},
-	"escape":          &regFilter{escapeFilter, NoArg},
-	"first":           &regFilter{firstFilter, NoArg},
-	"lower":           &regFilter{lowerFilter, NoArg},
+	"add":            &regFilter{addFilter, ReqArg},
+	"addslashes":     &regFilter{addslashesFilter, NoArg},
+	"capfirst":       &regFilter{capfirstFilter, NoArg},
+	"center":         &regFilter{centerFilter, ReqArg},
+	"cut":            &regFilter{cutFilter, ReqArg},
+	"default":        &regFilter{defaultFilter, ReqArg},
+	"default_if_nil": &regFilter{defaultIfNilFilter, ReqArg},
+	"escape":         &regFilter{escapeFilter, NoArg},
+	"first":          &regFilter{firstFilter, NoArg},
+	"lower":          &regFilter{lowerFilter, NoArg},
 }
 
 func addFilter(in value, s Stack, arg valuer) value {

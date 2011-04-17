@@ -242,16 +242,10 @@ type variable struct {
 }
 
 func (v *variable) value(s Stack) value {
-	var val value
-	if s != nil {
-		val = s[v.v]
-	}
-	if val == nil {
-		return nil
-	}
+	val := s[v.v]
 	switch val := val.(type) {
 	case bool, float32, float64, complex64, complex128, int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64, uintptr:
+		uint, uint8, uint16, uint32, uint64, uintptr, nil:
 		return val
 	case string:
 		if len(v.attrs) > 0 {
@@ -273,6 +267,10 @@ func (v *variable) value(s Stack) value {
 		return getVal(val, v.attrs)
 	}
 	return nil
+}
+
+func (v *variable) set(val value, s Stack) {
+	s[v.v] = val
 }
 
 // Represents a variable with possible attributes accessed.

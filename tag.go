@@ -75,7 +75,7 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 	case string:
 		n = len(v)
 		for _, c := range v {
-			s[f.v.v] = string(c)
+			f.v.set(string(c), s)
 			f.r.Render(wr, s)
 		}
 	case reflect.Value:
@@ -84,7 +84,7 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 		case reflect.Array, reflect.Slice:
 			n = v.Len()
 			for i := 0; i < n; i++ {
-				s[f.v.v] = refToVal(v.Index(i))
+				f.v.set(refToVal(v.Index(i)), s)
 				f.r.Render(wr, s)
 			}
 		case reflect.Chan:
@@ -93,20 +93,20 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 				if !ok {
 					break
 				}
-				s[f.v.v] = refToVal(x)
+				f.v.set(refToVal(x), s)
 				f.r.Render(wr, s)
 				n++
 			}
 		case reflect.Map:
 			n = v.Len()
 			for _, k := range v.MapKeys() {
-				s[f.v.v] = refToVal(v.MapIndex(k))
+				f.v.set(refToVal(v.MapIndex(k)), s)
 				f.r.Render(wr, s)
 			}
 		case reflect.Struct:
 			n = v.NumField()
 			for i := 0; i < n; i++ {
-				s[f.v.v] = refToVal(v.Field(i))
+				f.v.set(refToVal(v.Field(i)), s)
 				f.r.Render(wr, s)
 			}
 		}
