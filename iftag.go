@@ -32,7 +32,7 @@ func parseIf(p *parser) Renderer {
 }
 
 func (i *ifTag) Render(wr io.Writer, s Stack) {
-	if b, _ := valueAsBool(i.cond.value(s)); b {
+	if valueAsBool(i.cond.value(s)) {
 		i.ifNode.Render(wr, s)
 	} else if i.elseNode != nil {
 		i.elseNode.Render(wr, s)

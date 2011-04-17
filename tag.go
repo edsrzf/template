@@ -39,12 +39,10 @@ func parseFirstof(p *parser) Renderer {
 
 func (f firstofTag) Render(wr io.Writer, s Stack) {
 	var v value
-	var b bool
 	for _, val := range f {
 		v = val.value(s)
-		b, _ = valueAsBool(v)
-		if b {
-			str, _ := valueAsString(v)
+		if valueAsBool(v) {
+			str := valueAsString(v)
 			wr.Write([]byte(str))
 			return
 		}

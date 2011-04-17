@@ -38,7 +38,7 @@ type printVar struct {
 
 func (p *printVar) Render(wr io.Writer, s Stack) {
 	v := p.val.value(s)
-	str, _ := valueAsString(v)
+	str := valueAsString(v)
 	wr.Write([]byte(str))
 }
 

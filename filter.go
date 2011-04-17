@@ -42,21 +42,18 @@ var filters = map[string]*regFilter{
 }
 
 func addFilter(in value, s Stack, arg valuer) value {
-	l, ok1 := valueAsInt(in)
-	r, ok2 := valueAsInt(arg.value(s))
-	if !ok1 || !ok2 {
-		return in
-	}
+	l := valueAsInt(in)
+	r := valueAsInt(arg.value(s))
 	return l + r
 }
 
 func addslashesFilter(in value, s Stack, arg valuer) value {
-	str, _ := valueAsString(in)
+	str := valueAsString(in)
 	return strings.Replace(str, "'", "\\'", -1)
 }
 
 func capfirstFilter(in value, s Stack, arg valuer) value {
-	str, _ := valueAsString(in)
+	str := valueAsString(in)
 	if len(str) == 0 {
 		return in
 	}
@@ -70,12 +67,12 @@ func capfirstFilter(in value, s Stack, arg valuer) value {
 }
 
 func centerFilter(in value, s Stack, arg valuer) value {
-	c, ok := valueAsInt(arg.value(s))
+	c := valueAsInt(arg.value(s))
 	count := int(c)
-	if !ok || count <= 0 {
+	if count <= 0 {
 		return in
 	}
-	str, _ := valueAsString(in)
+	str := valueAsString(in)
 	runes := []int(str)
 	l := len(runes)
 	if l >= count {
@@ -94,8 +91,8 @@ func centerFilter(in value, s Stack, arg valuer) value {
 // Our cutFilter is slightly more forgiving than Django's. It allows the argument to be an integer.
 // {{ 123|cut:2 }} will output "13".
 func cutFilter(in value, s Stack, arg valuer) value {
-	str, _ := valueAsString(in)
-	ch, _ := valueAsString(arg.value(s))
+	str := valueAsString(in)
+	ch := valueAsString(arg.value(s))
 	return strings.Replace(str, ch, "", -1)
 }
 
@@ -105,19 +102,17 @@ func dateFilter(in value, s Stack, arg valuer) value {
 }
 
 func defaultFilter(in value, s Stack, arg valuer) value {
-	if b, _ := valueAsBool(in); b {
+	if b := valueAsBool(in); b {
 		return in
 	}
-	def, _ := valueAsString(arg.value(s))
-	return def
+	return valueAsString(arg.value(s))
 }
 
 func defaultIfNilFilter(in value, s Stack, arg valuer) value {
 	if in != nil {
 		return in
 	}
-	def, _ := valueAsString(arg.value(s))
-	return def
+	return valueAsString(arg.value(s))
 }
 
 // Instead of taking a list of dictionaries, it takes a slice of maps
@@ -139,7 +134,7 @@ func divisiblebyFilter(in value, s Stack, arg valuer) value {
 
 // TODO: This isn't quite right; this filter should work anywhere in a filter chain so it probably needs to be treated specially
 func escapeFilter(in value, s Stack, arg valuer) value {
-	str, _ := valueAsString(in)
+	str := valueAsString(in)
 	// TODO: We can probably get better performance by implementing this ourselves
 	str = strings.Replace(str, "&", "&amp;", -1)
 	str = strings.Replace(str, "<", "&lt;", -1)
@@ -175,7 +170,7 @@ func firstFilter(in value, s Stack, arg valuer) value {
 }
 
 func fixAmpersandsFilter(in value, s Stack, arg valuer) value {
-	str, _ := valueAsString(in)
+	str := valueAsString(in)
 	return strings.Replace(str, "&", "&amp;", -1)
 }
 
@@ -185,7 +180,7 @@ func floatformatFilter(in value, s Stack, arg valuer) value {
 }
 
 func forceEscapeFilter(in value, s Stack, arg valuer) value {
-	str, _ := valueAsString(in)
+	str := valueAsString(in)
 	// TODO: We can probably get better performance by implementing this ourselves
 	str = strings.Replace(str, "&", "&amp;", -1)
 	str = strings.Replace(str, "<", "&lt;", -1)
@@ -239,15 +234,9 @@ func lengthFilter(in value, s Stack, arg valuer) value {
 func lengthIsFilter(in value, s Stack, arg valuer) value {
 	l, ok := lengthFilter(in, s, arg).(int)
 	if !ok {
-		// TODO: Is this right?
-		return in
+		return false
 	}
-	val, ok := valueAsInt(arg)
-	if !ok {
-		// TODO: Is this right?
-		return in
-	}
-	return l == int(val)
+	return int64(l) == valueAsInt(arg)
 }
 
 func linebreaksFilter(in value, s Stack, arg valuer) value {
@@ -276,16 +265,13 @@ func linenumbersFilter(in value, s Stack, arg valuer) value {
 }
 
 func ljustFilter(in value, s Stack, arg valuer) value {
-	c, ok := valueAsInt(arg.value(s))
-	count := int(c)
-	if !ok || count <= 0 {
-		// TODO: Is this correct?
+	count := int(valueAsInt(arg.value(s)))
+	if count <= 0 {
 		return in
 	}
 	str := fmt.Sprint(in)
 	runes := []int(str)
 	if len(runes) >= count {
-		// TODO: Is this correct?
 		return in
 	}
 	count -= len(runes)
@@ -314,7 +300,7 @@ func phone2numericFilter(in value, s Stack, arg valuer) value {
 func pluralizeFilter(in value, s Stack, arg valuer) value {
 	var single string
 	var plural string
-	suffix, _ := valueAsString(arg.value(s))
+	suffix := valueAsString(arg.value(s))
 	if suffix == "" {
 		plural = "s"
 	} else {
@@ -327,12 +313,7 @@ func pluralizeFilter(in value, s Stack, arg valuer) value {
 		}
 	}
 
-	v, ok := valueAsUint(in)
-	if !ok {
-		// TODO: Is this right?
-		return in
-	}
-	if v > 0 {
+	if valueAsUint(in) > 0 {
 		return plural
 	}
 	return single
@@ -354,16 +335,13 @@ func removeTagsFilter(in value, s Stack, arg valuer) value {
 }
 
 func rjustFilter(in value, s Stack, arg valuer) value {
-	c, ok := valueAsInt(arg.value(s))
-	count := int(c)
-	if !ok || count <= 0 {
-		// TODO: Is this correct?
+	count := int(valueAsInt(arg.value(s)))
+	if count <= 0 {
 		return in
 	}
 	str := fmt.Sprint(in)
 	runes := []int(str)
 	if len(runes) >= count {
-		// TODO: Is this correct?
 		return in
 	}
 	count -= len(runes)

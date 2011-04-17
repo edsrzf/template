@@ -11,8 +11,8 @@ var filterTests = []templateTest{
 	templateTest{"{{ var|add:\"1\" }}", Context{"var": 14}, "15"},
 	templateTest{"{{ var|add:'-1' }}", Context{"var": 14}, "13"},
 	templateTest{"{{ var|add:1 }}", Context{"var": "14"}, "15"},
-	templateTest{"{{ var|add:1 }}", nil, ""},
-	templateTest{"{{ var|add:1 }}", Context{"var": "a"}, "a"},
+	templateTest{"{{ var|add:1 }}", nil, "1"},
+	templateTest{"{{ var|add:1 }}", Context{"var": "a"}, "1"},
 
 	// Test addslashes
 	templateTest{"{{ var|addslashes }}", Context{"var": "I'm using Django"}, "I\\'m using Django"},
