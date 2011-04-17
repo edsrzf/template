@@ -61,7 +61,7 @@ func TestTemplate(t *testing.T) {
 // Benchmark taken from here: http://code.google.com/p/spitfire/source/browse/trunk/tests/perf/bigtable.py
 var bench = `<table>
 {% for row in table %}
-<tr>{% for col in row.values %}{{ col|escape }}{% endfor %}</tr>
+<tr>{% for col in row %}{{ col|escape }}{% endfor %}</tr>
 {% endfor %}
 </table>
 `

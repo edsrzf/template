@@ -64,9 +64,8 @@ func valueAsString(v value) string {
 	case bool:
 		if v {
 			return "True"
-		} else {
-			return "False"
 		}
+		return "False"
 	case float32:
 		return strconv.Ftoa32(v, 'g', -1)
 	case float64:
