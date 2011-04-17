@@ -7,6 +7,7 @@ include $(GOROOT)/src/Make.inc
 TARG=jingo/template
 GOFILES=\
 	filter.go\
+	iftag.go\
 	lexer.go\
 	tag.go\
 	template.go\
