@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"strconv"
 )
 
@@ -51,6 +52,12 @@ func (t *Template) Execute(wr io.Writer, c Context) {
 	if c != nil {
 		for k, v := range t.scope {
 			if val, ok := c[k]; ok {
+				switch val.(type) {
+				case bool, float32, float64, complex64, complex128, int, int8, int16,
+					int32, int64, uint, uint8, uint16, uint32, uint64, uintptr, string, nil:
+				default:
+					val = reflect.NewValue(val)
+				}
 				s[v] = val
 			}
 		}

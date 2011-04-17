@@ -6,6 +6,8 @@ import (
 	"utf8"
 )
 
+// value can represent a variety of types. Basic types are represented as themselves,
+// while composite types are represented as reflect.Value.
 type value interface{}
 
 func valueAsBool(v value) (bool, bool) {
@@ -236,21 +238,15 @@ type valuer interface {
 
 type stringLit string
 
-func (str stringLit) value(s Stack) value {
-	return string(str)
-}
+func (str stringLit) value(s Stack) value { return string(str) }
 
 type intLit int64
 
-func (i intLit) value(s Stack) value {
-	return int64(i)
-}
+func (i intLit) value(s Stack) value { return int64(i) }
 
 type floatLit float64
 
-func (f floatLit) value(s Stack) value {
-	return float64(f)
-}
+func (f floatLit) value(s Stack) value { return float64(f) }
 
 type variable struct {
 	v     int
@@ -265,38 +261,30 @@ func (v *variable) value(s Stack) value {
 	if val == nil {
 		return nil
 	}
-	// We might be able to avoid reflection
-	var ret value
-	switch val.(type) {
+	switch val := val.(type) {
 	case bool, float32, float64, complex64, complex128, int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64, uintptr, string:
-		ret = val
-	}
-	if ret != nil {
-		// This has an attribute specified, but only strings accept one.
+		uint, uint8, uint16, uint32, uint64, uintptr:
+		return val
+	case string:
 		if len(v.attrs) > 0 {
-			str, ok := ret.(string)
-			if !ok {
-				return nil
-			}
 			idx, err := strconv.Atoi(v.attrs[0])
 			if err != nil {
 				return nil
 			}
 			var n, i, c int
-			for i, c = range str {
+			for i, c = range val {
 				if n == idx {
 					break
 				}
 				n++
 			}
-			return str[i : i+utf8.RuneLen(c)]
+			return val[i : i+utf8.RuneLen(c)]
 		}
-	} else {
-		ref := reflect.NewValue(val)
-		ret = getVal(ref, v.attrs)
+		return val
+	case reflect.Value:
+		return getVal(val, v.attrs)
 	}
-	return ret
+	return nil
 }
 
 // Represents a variable with possible attributes accessed.

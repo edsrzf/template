@@ -34,7 +34,7 @@ var filterTests = []templateTest{
 		Context{"var1": 14, "var2": nil}, "14 def def"},
 
 	// Test default_if_none
-	templateTest{"{{ var1|default_if_none:'def' }} {{ var2|default_if_none:'def' }} {{ var3|default_if_none:'def' }}",
+	templateTest{"{{ var1|default_if_nil:'def' }} {{ var2|default_if_nil:'def' }} {{ var3|default_if_nil:'def' }}",
 		Context{"var1": 14, "var2": nil}, "14 def def"},
 
 	// Test first

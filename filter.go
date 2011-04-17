@@ -35,7 +35,7 @@ var filters = map[string]*regFilter{
 	"center":          &regFilter{centerFilter, ReqArg},
 	"cut":             &regFilter{cutFilter, ReqArg},
 	"default":         &regFilter{defaultFilter, ReqArg},
-	"default_if_none": &regFilter{defaultIfNoneFilter, ReqArg},
+	"default_if_nil":  &regFilter{defaultIfNilFilter, ReqArg},
 	"escape":          &regFilter{escapeFilter, NoArg},
 	"first":           &regFilter{firstFilter, NoArg},
 	"lower":           &regFilter{lowerFilter, NoArg},
@@ -105,15 +105,14 @@ func dateFilter(in value, s Stack, arg valuer) value {
 }
 
 func defaultFilter(in value, s Stack, arg valuer) value {
-	b, _ := valueAsBool(in)
-	if b {
+	if b, _ := valueAsBool(in); b {
 		return in
 	}
 	def, _ := valueAsString(arg.value(s))
 	return def
 }
 
-func defaultIfNoneFilter(in value, s Stack, arg valuer) value {
+func defaultIfNilFilter(in value, s Stack, arg valuer) value {
 	if in != nil {
 		return in
 	}
