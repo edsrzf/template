@@ -35,11 +35,11 @@ func firstofTag(p *parser) Renderer {
 	return f
 }
 
-func (f firstof) Render(wr io.Writer, context Context) {
+func (f firstof) Render(wr io.Writer, s Stack) {
 	var v value
 	var b bool
 	for _, val := range f {
-		v = val.value(context)
+		v = val.value(s)
 		b, _ = valueAsBool(v)
 		if b {
 			str, _ := valueAsString(v)

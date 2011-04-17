@@ -11,14 +11,14 @@ type Context map[string]interface{}
 type Stack []value
 
 type Renderer interface {
-	Render(wr io.Writer, context Context)
+	Render(wr io.Writer, s Stack)
 }
 
 type printLit struct {
 	content string
 }
 
-func (p *printLit) Render(wr io.Writer, context Context) {
+func (p *printLit) Render(wr io.Writer, s Stack) {
 	wr.Write([]byte(p.content))
 }
 
@@ -26,23 +26,32 @@ type printVar struct {
 	val *expr
 }
 
-func (p *printVar) Render(wr io.Writer, context Context) {
-	v := p.val.value(context)
-	s, _ := valueAsString(v)
-	wr.Write([]byte(s))
+func (p *printVar) Render(wr io.Writer, s Stack) {
+	v := p.val.value(s)
+	str, _ := valueAsString(v)
+	wr.Write([]byte(str))
 }
 
 type Template struct {
-	nodes []Renderer
+	scope  scope
+	nodes  []Renderer
 }
 
 func (t *Template) push(n Renderer) {
 	t.nodes = append(t.nodes, n)
 }
 
-func (t *Template) Execute(wr io.Writer, context Context) {
+func (t *Template) Execute(wr io.Writer, c Context) {
+	s := make(Stack, len(t.scope))
+	if c != nil {
+		for k, v := range t.scope {
+			if val, ok := c[k]; ok {
+				s[v] = val
+			}
+		}
+	}
 	for _, node := range t.nodes {
-		node.Render(wr, context)
+		node.Render(wr, s)
 	}
 }
 
@@ -113,21 +122,20 @@ func (p *parser) parseVar() valuer {
 	return ret
 }
 
-func (p *parser) parseAttrVar() variable {
-	v := make(variable, 0, 2)
-	p.s.Lookup(p.lit)
-	v = append(v, p.lit)
+func (p *parser) parseAttrVar() *variable {
+	var v variable
+	v.v = p.s.Lookup(p.lit)
 	p.expect(tokIdent)
 	for p.tok == tokDot {
 		p.expect(tokDot)
-		v = append(v, p.lit)
+		v.attrs = append(v.attrs, p.lit)
 		if p.tok == tokInt {
 			p.expect(tokInt)
 		} else {
 			p.expect(tokIdent)
 		}
 	}
-	return v
+	return &v
 }
 
 func (p *parser) parseFilters() []*filter {
@@ -164,7 +172,7 @@ func Parse(s string) (*Template, os.Error) {
 	t := new(Template)
 	l := &lexer{src: []byte(s)}
 	l.init()
-	p := &parser{l: l}
+	p := &parser{l: l, s: scope{}}
 
 	p.next()
 	for p.tok != tokEof {
@@ -178,6 +186,7 @@ func Parse(s string) (*Template, os.Error) {
 			t.push(p.parseVarTag())
 		}
 	}
+	t.scope = p.s
 
 	return t, nil
 }

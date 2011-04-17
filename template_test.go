@@ -66,7 +66,7 @@ func TestTemplate(t *testing.T) {
 `*/
 var bench = `<table>
 <tr>{{ col.1|escape }}</tr>
-<tr>{% firstof falseVar1 falseVar2 falseVar3 falseVar4 trueVar %}</tr>
+<tr>{% firstof falseVar falseVar falseVar falseVar trueVar %}</tr>
 </table>
 `
 
@@ -85,7 +85,7 @@ func (w nilWriter) Write(b []byte) (int, os.Error) {
 func BenchmarkTemplateExecute(b *testing.B) {
 	b.StopTimer()
 	t, _ := Parse(bench)
-	c := Context{"col": "a column", "falseVar1": false, "falseVar2": 0, "falseVar3": "", "falseVar4": nil, "trueVar": true}
+	c := Context{"col": "a column", "falseVar": false, "trueVar": true}
 	w := nilWriter(0)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {

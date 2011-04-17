@@ -244,17 +244,17 @@ func valueAsUint(v value) (uint64, bool) {
 }
 
 type condition interface {
-	eval(context Context) bool
+	eval(s Stack) bool
 }
 
 type equal struct {
 	left, right *variable
 }
 
-func (e *equal) eval(context Context) bool {
+func (e *equal) eval(s Stack) bool {
 	// TODO: Make sure types are comparable
-	l := e.left.value(context)
-	r := e.right.value(context)
+	l := e.left.value(s)
+	r := e.right.value(s)
 	return l == r
 }
 
@@ -262,10 +262,10 @@ type nequal struct {
 	left, right *variable
 }
 
-func (n *nequal) eval(context Context) bool {
+func (n *nequal) eval(s Stack) bool {
 	// TODO: Make sure types are comparable
-	l := n.left.value(context)
-	r := n.right.value(context)
+	l := n.left.value(s)
+	r := n.right.value(s)
 	return l != r
 }
 
@@ -273,108 +273,76 @@ type not struct {
 	inner condition
 }
 
-func (n *not) eval(context Context) bool {
-	return !n.inner.eval(context)
+func (n *not) eval(s Stack) bool {
+	return !n.inner.eval(s)
 }
 
 type and struct {
 	left, right condition
 }
 
-func (a *and) eval(context Context) bool {
-	return a.left.eval(context) && a.right.eval(context)
+func (a *and) eval(s Stack) bool {
+	return a.left.eval(s) && a.right.eval(s)
 }
 
 type or struct {
 	left, right condition
 }
 
-func (o *or) eval(context Context) bool {
-	return o.left.eval(context) || o.right.eval(context)
+func (o *or) eval(s Stack) bool {
+	return o.left.eval(s) || o.right.eval(s)
 }
 
 type valuer interface {
-	value(context Context) value
+	value(s Stack) value
 }
 
 type stringLit string
 
-func (s stringLit) value(context Context) value {
-	return string(s)
+func (str stringLit) value(s Stack) value {
+	return string(str)
 }
 
 type intLit int64
 
-func (i intLit) value(context Context) value {
+func (i intLit) value(s Stack) value {
 	return int64(i)
 }
 
 type floatLit float64
 
-func (f floatLit) value(context Context) value {
+func (f floatLit) value(s Stack) value {
 	return float64(f)
 }
 
-type variable []string
+type variable struct {
+	v     int
+	attrs []string
+}
 
-func (v variable) value(context Context) value {
-	// TODO: Panic instead?
-	if len(v) == 0 {
-		return nil
-	}
+func (v *variable) value(s Stack) value {
 	var val value
-	if context != nil {
-		val = context[v[0]]
+	if s != nil {
+		val = s[v.v]
 	}
 	if val == nil {
 		return nil
 	}
 	// We might be able to avoid reflection
 	var ret value
-	switch val := val.(type) {
-	case bool:
-		ret = val
-	case float32:
-		ret = val
-	case float64:
-		ret = val
-	case complex64:
-		ret = val
-	case complex128:
-		ret = val
-	case int:
-		ret = val
-	case int8:
-		ret = val
-	case int16:
-		ret = val
-	case int32:
-		ret = val
-	case int64:
-		ret = val
-	case uint:
-		ret = val
-	case uint8:
-		ret = val
-	case uint16:
-		ret = val
-	case uint32:
-		ret = val
-	case uint64:
-		ret = val
-	case uintptr:
-		ret = val
-	case string:
+	switch val.(type) {
+	case bool, float32, float64, complex64, complex128, int, int8, int16, int32, int64,
+	     uint, uint8, uint16, uint32, uint64, uintptr, string:
 		ret = val
 	}
 	if ret != nil {
 		// This has an attribute specified, but only strings accept one.
-		if len(v) > 1 {
+		if len(v.attrs) > 0 {
 			str, ok := ret.(string)
 			if !ok {
 				return nil
 			}
-			idx, err := strconv.Atoi(v[1])
+			idx, err := strconv.Atoi(v.attrs[0])
 			if err != nil {
 				return nil
 			}
@@ -389,7 +357,7 @@ func (v variable) value(context Context) value {
 		}
 	} else {
 		ref := reflect.NewValue(val)
-		ret = getVal(ref, v[1:])
+		ret = getVal(ref, v.attrs)
 	}
 	return ret
 }
@@ -414,8 +382,8 @@ type expr struct {
 // - The bool value false
 // - An empty string
 // - Zero of any numeric type
-func (e *expr) eval(context Context) bool {
-	v := e.value(context)
+func (e *expr) eval(s Stack) bool {
+	v := e.value(s)
 	if v == nil {
 		return false
 	}
@@ -424,10 +392,10 @@ func (e *expr) eval(context Context) bool {
 	return ret
 }
 
-func (e *expr) value(context Context) value {
-	ret := e.v.value(context)
+func (e *expr) value(s Stack) value {
+	ret := e.v.value(s)
 	for _, f := range e.filters {
-		ret = f.f(ret, context, f.args)
+		ret = f.f(ret, s, f.args)
 	}
 	return ret
 }
