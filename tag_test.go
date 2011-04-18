@@ -18,6 +18,7 @@ var tagTests = []templateTest{
 	templateTest{"{% for l in '' %}{{l}}{% else %}hi{% endfor %}", nil, "hi"},
 	templateTest{"{% for v in var %}{{v}}{% endfor %}", Context{"var": []int{1, 2, 3}}, "123"},
 	templateTest{"{% for v in var %}{{v}} {% endfor %}", Context{"var": &testStruct{1, 3.14}}, "1 3.14 "},
+	templateTest{"{% for v in var %}{{v}}{% endfor %} {{v}}", Context{"var": []int{1, 2, 3}, "v": "hi"}, "123 hi"},
 
 	// if
 	templateTest{"{% if 1 %}hi{% endif %}", nil, "hi"},

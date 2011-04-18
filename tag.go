@@ -45,8 +45,10 @@ type forTag struct {
 }
 
 func parseFor(p *parser) Renderer {
+	p.s.Push()
+	defer p.s.Pop()
 	name := p.Expect(tokIdent)
-	v := &variable{v: p.s.Lookup(name)}
+	v := &variable{v: p.s.Insert(name)}
 	p.ExpectWord("in")
 	collection := p.parseVar()
 	switch collection.(type) {

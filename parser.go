@@ -10,7 +10,7 @@ type parser struct {
 	l   *lexer
 	tok token
 	lit string
-	s   scope
+	s   *scope
 }
 
 func (p *parser) Error(format string, args ...interface{}) {
@@ -156,7 +156,7 @@ func Parse(s string) (*Template, os.Error) {
 	t := new(Template)
 	l := &lexer{src: []byte(s)}
 	l.init()
-	p := &parser{l: l, s: scope{}}
+	p := &parser{l: l, s: newScope()}
 
 	p.next()
 	_, t.nodes = p.ParseUntil()
