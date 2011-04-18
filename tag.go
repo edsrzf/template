@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-type TagFunc func(p *parser) Renderer
+type TagFunc func(p *parser) Node
 
 var tags = map[string]TagFunc{
 	"firstof": parseFirstof,
@@ -15,7 +15,7 @@ var tags = map[string]TagFunc{
 
 type firstofTag []valuer
 
-func parseFirstof(p *parser) Renderer {
+func parseFirstof(p *parser) Node {
 	var f firstofTag
 	for p.tok != tokBlockTagEnd {
 		v := p.parseVar()
@@ -40,11 +40,11 @@ func (f firstofTag) Render(wr io.Writer, s Stack) {
 type forTag struct {
 	v          *variable
 	collection valuer
-	r          Renderer
-	elseNode   Renderer
+	r          Node
+	elseNode   Node
 }
 
-func parseFor(p *parser) Renderer {
+func parseFor(p *parser) Node {
 	p.s.Push()
 	defer p.s.Pop()
 	name := p.Expect(tokIdent)
@@ -57,7 +57,7 @@ func parseFor(p *parser) Renderer {
 	}
 	p.Expect(tokBlockTagEnd)
 	tok, r := p.ParseUntil("else", "endfor")
-	var elseNode Renderer
+	var elseNode Node
 	if tok == "else" {
 		p.Expect(tokBlockTagEnd)
 		tok, elseNode = p.ParseUntil("endfor")

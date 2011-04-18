@@ -82,13 +82,13 @@ func (s *scope) Insert(name string) int {
 	return v
 }
 
-type Renderer interface {
+type Node interface {
 	Render(wr io.Writer, s Stack)
 }
 
-type RenderList []Renderer
+type NodeList []Node
 
-func (l RenderList) Render(wr io.Writer, s Stack) {
+func (l NodeList) Render(wr io.Writer, s Stack) {
 	for _, r := range l {
 		r.Render(wr, s)
 	}
@@ -114,7 +114,7 @@ func (p *printVar) Render(wr io.Writer, s Stack) {
 
 type Template struct {
 	scope *scope
-	nodes RenderList
+	nodes NodeList
 }
 
 func (t *Template) Execute(wr io.Writer, c Context) {

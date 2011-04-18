@@ -39,8 +39,8 @@ func (p *parser) ExpectWord(word string) {
 }
 
 // parse until one of the following tags
-func (p *parser) ParseUntil(tags ...string) (string, RenderList) {
-	r := make(RenderList, 0, 10)
+func (p *parser) ParseUntil(tags ...string) (string, NodeList) {
+	r := make(NodeList, 0, 10)
 	for p.tok != tokEof {
 		switch p.tok {
 		case tokText:
@@ -65,7 +65,7 @@ func (p *parser) ParseUntil(tags ...string) (string, RenderList) {
 	return "", r
 }
 
-func (p *parser) parseBlockTag() Renderer {
+func (p *parser) parseBlockTag() Node {
 	if tag, ok := tags[p.Expect(tokIdent)]; ok {
 		return tag(p)
 	}
@@ -73,7 +73,7 @@ func (p *parser) parseBlockTag() Renderer {
 	return nil
 }
 
-func (p *parser) parseVarTag() Renderer {
+func (p *parser) parseVarTag() Node {
 	p.Expect(tokVarTagStart)
 	v := p.parseVar()
 	f := p.parseFilters()

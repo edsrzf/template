@@ -6,11 +6,11 @@ import (
 
 type ifTag struct {
 	cond     valuer
-	ifNode   Renderer
-	elseNode Renderer
+	ifNode   Node
+	elseNode Node
 }
 
-func parseIf(p *parser) Renderer {
+func parseIf(p *parser) Node {
 	tag := new(ifTag)
 	tag.cond = parseCondition(p)
 	p.Expect(tokBlockTagEnd)
