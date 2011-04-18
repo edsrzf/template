@@ -75,13 +75,22 @@ func (p *parser) parseBlockTag() Node {
 
 func (p *parser) parseVarTag() Node {
 	p.Expect(tokVarTagStart)
-	v := p.parseVar()
-	f := p.parseFilters()
+	e := p.parseExpr()
 	p.Expect(tokVarTagEnd)
-	return &expr{v, f}
+	return e
 }
 
-func (p *parser) parseVar() valuer {
+func (p *parser) parseExpr() valuer {
+	v := p.parseVal()
+	a := p.parseAttrs()
+	f := p.parseFilters()
+	if len(a) == 0 && len(f) == 0 {
+		return v
+	}
+	return &expr{v, a, f}
+}
+
+func (p *parser) parseVal() valuer {
 	var ret valuer
 	switch p.tok {
 	case tokInt:
@@ -102,26 +111,29 @@ func (p *parser) parseVar() valuer {
 		ret = stringLit(p.lit)
 		p.next()
 	case tokIdent:
-		ret = p.parseAttrVar()
+		ret = p.parseVar()
 	default:
 		p.Error("Unexpected token %s", tokStrings[p.tok])
 	}
 	return ret
 }
 
-func (p *parser) parseAttrVar() *variable {
-	var v variable
-	v.v = p.s.Lookup(p.Expect(tokIdent))
+func (p *parser) parseVar() variable {
+	return variable(p.s.Lookup(p.Expect(tokIdent)))
+}
+
+func (p *parser) parseAttrs() []string {
+	var attrs []string
 	for p.tok == tokDot {
 		p.Expect(tokDot)
-		v.attrs = append(v.attrs, string(p.lit))
+		attrs = append(attrs, string(p.lit))
 		if p.tok == tokInt {
-			p.Expect(tokInt)
+			p.next()
 		} else {
 			p.Expect(tokIdent)
 		}
 	}
-	return &v
+	return attrs
 }
 
 func (p *parser) parseFilters() []*filter {
@@ -147,7 +159,7 @@ func (p *parser) parseFilters() []*filter {
 		}
 		if args {
 			p.Expect(tokArgument)
-			val = p.parseVar()
+			val = p.parseExpr()
 		}
 		f = append(f, &filter{rf.f, val})
 	}

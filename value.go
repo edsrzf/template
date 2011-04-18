@@ -1,9 +1,9 @@
 package template
 
 import (
+	"io"
 	"reflect"
 	"strconv"
-	"utf8"
 )
 
 // value can represent a variety of types. Basic types are represented as themselves,
@@ -221,87 +221,54 @@ func valueAsUint(v value) uint64 {
 }
 
 type valuer interface {
+	Node
 	value(s Stack) value
+}
+
+func renderValuer(v valuer, wr io.Writer, s Stack) {
+	val := v.value(s)
+	str := valueAsString(val)
+	wr.Write([]byte(str))
 }
 
 type stringLit string
 
 func (str stringLit) value(s Stack) value { return string(str) }
 
+func (str stringLit) Render(wr io.Writer, s Stack) { wr.Write([]byte(string(str))) }
+
 type intLit int64
 
 func (i intLit) value(s Stack) value { return int64(i) }
+
+func (i intLit) Render(wr io.Writer, s Stack) {
+	str := strconv.Itoa64(int64(i))
+	wr.Write([]byte(str))
+}
 
 type floatLit float64
 
 func (f floatLit) value(s Stack) value { return float64(f) }
 
-// A variable represents a variable with possible attributes accessed.
-// Attributes work like this:
-// For the expression "a.b"
-// - If a is a map[string]T, this is treated as a["b"]
-// - If a is a struct or pointer to a struct, this is treated as a.b
-// - If a is a map[numeric]T, slice, array, or pointer to an array, this is treated as a[b]
-// - If the above all fail, this is treated as a method call a.b()
-type variable struct {
-	v     int
-	attrs []string
+func (f floatLit) Render(wr io.Writer, s Stack) {
+	str := strconv.Ftoa64(float64(f), 'g', -1)
+	wr.Write([]byte(str))
 }
 
-func (v *variable) value(s Stack) value {
-	val := s[v.v]
-	switch val := val.(type) {
-	case bool, float32, float64, complex64, complex128, int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64, uintptr, nil:
-		return val
-	case string:
-		if len(v.attrs) > 0 {
-			idx, err := strconv.Atoi(v.attrs[0])
-			if err != nil {
-				return nil
-			}
-			var n, i, c int
-			for i, c = range val {
-				if n == idx {
-					break
-				}
-				n++
-			}
-			return val[i : i+utf8.RuneLen(c)]
-		}
-		return val
-	case reflect.Value:
-		return getVal(val, v.attrs)
-	}
-	return nil
+// A variable represents a variable. Its integer is the index in the stack
+// where it can be found.
+type variable int
+
+func (v variable) value(s Stack) value {
+	return s[v]
 }
 
-func (v *variable) set(val value, s Stack) {
-	s[v.v] = val
+func (v variable) set(val value, s Stack) {
+	s[v] = val
 }
 
-// Returns a true or false value for a variable
-// false values include:
-// - nil
-// - A slice, map, channel, array, or pointer to an array with zero len
-// - The bool value false
-// - An empty string
-// - Zero of any numeric type
-func (e *expr) eval(s Stack) bool {
-	v := e.value(s)
-	if v == nil {
-		return false
-	}
-
-	return valueAsBool(v)
-}
-
-func (e *expr) value(s Stack) value {
-	ret := e.v.value(s)
-	for _, f := range e.filters {
-		ret = f.f(ret, s, f.args)
-	}
-	return ret
+func (v variable) Render(wr io.Writer, s Stack) {
+	renderValuer(v, wr, s)
 }
 
 func getVal(ref reflect.Value, specs []string) value {

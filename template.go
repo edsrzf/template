@@ -3,6 +3,8 @@ package template
 import (
 	"io"
 	"reflect"
+	"strconv"
+	"utf8"
 )
 
 type Context map[string]interface{}
@@ -103,16 +105,74 @@ type Template struct {
 	nodes NodeList
 }
 
-// expr represents a value with possible filters
+// expr represents a value with possible attributes and filters.
+// Attributes work like this:
+// For the expression "a.b"
+// - If a is a map[string]T, this is treated as a["b"]
+// - If a is a struct or pointer to a struct, this is treated as a.b
+// - If a is a map[numeric]T, slice, array, or pointer to an array, this is treated as a[b]
+// - If the above all fail, this is treated as a method call a.b()
 type expr struct {
 	v       valuer
+	attrs   []string
 	filters []*filter
 }
 
-func (e *expr) Render(wr io.Writer, s Stack) {
+// Returns a true or false value for a variable
+// false values include:
+// - nil
+// - A slice, map, channel, array, or pointer to an array with zero len
+// - The bool value false
+// - An empty string
+// - Zero of any numeric type
+func (e *expr) eval(s Stack) bool {
 	v := e.value(s)
-	str := valueAsString(v)
-	wr.Write([]byte(str))
+	if v == nil {
+		return false
+	}
+
+	return valueAsBool(v)
+}
+
+func (e *expr) value(s Stack) value {
+	val := e.v.value(s)
+
+	// apply attributes
+	var ret value
+	switch val := val.(type) {
+	case bool, float32, float64, complex64, complex128, int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64, uintptr, nil:
+		ret = val
+	case string:
+		if len(e.attrs) > 0 {
+			idx, err := strconv.Atoi(e.attrs[0])
+			if err != nil {
+				return nil
+			}
+			var n, i, c int
+			for i, c = range val {
+				if n == idx {
+					break
+				}
+				n++
+			}
+			ret = val[i : i+utf8.RuneLen(c)]
+			break
+		}
+		ret = val
+	case reflect.Value:
+		ret = getVal(val, e.attrs)
+	}
+
+	// apply filters
+	for _, f := range e.filters {
+		ret = f.f(ret, s, f.args)
+	}
+	return ret
+}
+
+func (e *expr) Render(wr io.Writer, s Stack) {
+	renderValuer(e, wr, s)
 }
 
 func (t *Template) Execute(wr io.Writer, c Context) {

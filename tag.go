@@ -18,7 +18,7 @@ type firstofTag []valuer
 func parseFirstof(p *parser) Node {
 	var f firstofTag
 	for p.tok != tokBlockTagEnd {
-		v := p.parseVar()
+		v := p.parseExpr()
 		f = append(f, v)
 	}
 	p.Expect(tokBlockTagEnd)
@@ -38,7 +38,7 @@ func (f firstofTag) Render(wr io.Writer, s Stack) {
 }
 
 type forTag struct {
-	v          *variable
+	v          variable
 	collection valuer
 	r          Node
 	elseNode   Node
@@ -48,9 +48,9 @@ func parseFor(p *parser) Node {
 	p.s.Push()
 	defer p.s.Pop()
 	name := p.Expect(tokIdent)
-	v := &variable{v: p.s.Insert(name)}
+	v := variable(p.s.Insert(name))
 	p.ExpectWord("in")
-	collection := p.parseVar()
+	collection := p.parseExpr()
 	switch collection.(type) {
 	case intLit, floatLit:
 		p.Error("numeric literals are not iterable")

@@ -44,7 +44,7 @@ type condition interface {
 }
 
 func parseCondition(p *parser) valuer {
-	return p.parseVar()
+	return p.parseExpr()
 }
 
 type equal struct {
