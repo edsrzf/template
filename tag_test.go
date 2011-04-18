@@ -27,6 +27,13 @@ var tagTests = []templateTest{
 	templateTest{"{% if '' %}hi{% endif %}", nil, ""},
 	templateTest{"{% if var %}hi{% endif %}", nil, ""},
 	templateTest{"{% if var %}hi{% endif %}", Context{"var": 1}, "hi"},
+
+	// set
+	templateTest{"{% set var1 1 %}{% set var2 'hi' %}{% set var3 3.14 %}{{ var1 }} {{ var2 }} {{ var3 }}", nil, "1 hi 3.14"},
+	templateTest{"{% set setvar var %}{{ setvar }}", Context{"var": "test"}, "test"},
+
+	// with
+	templateTest{"{% with %}{% set var 1 %}{{ var }}{% endwith %} {{ var }}", nil, "1 "},
 }
 
 func TestTags(t *testing.T) {

@@ -11,6 +11,8 @@ var tags = map[string]TagFunc{
 	"firstof": parseFirstof,
 	"for":     parseFor,
 	"if":      parseIf,
+	"set":     parseSet,
+	"with":    parseWith,
 }
 
 type firstofTag []valuer
@@ -117,3 +119,36 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 		f.elseNode.Render(wr, s)
 	}
 }
+
+type setTag struct {
+	v variable
+	e valuer
+}
+
+func parseSet(p *parser) Node {
+	name := p.Expect(tokIdent)
+	v := p.s.Insert(name)
+	e := p.parseExpr()
+	p.Expect(tokBlockTagEnd)
+	return &setTag{v, e}
+}
+
+func (t *setTag) Render(wr io.Writer, s Stack) {
+	t.v.set(t.e.value(s), s)
+}
+
+type with NodeList
+
+func parseWith(p *parser) Node {
+	p.s.Push()
+	defer p.s.Pop()
+	p.Expect(tokBlockTagEnd)
+	tok, nodes := p.ParseUntil("endwith")
+	if tok != "endwith" {
+		p.Error("unterminated with tag")
+	}
+	p.Expect(tokBlockTagEnd)
+	return with(nodes)
+}
+
+func (w with) Render(wr io.Writer, s Stack) { NodeList(w).Render(wr, s) }
