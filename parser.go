@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 )
@@ -168,4 +169,12 @@ func Parse(s []byte) (*Template, os.Error) {
 
 func ParseString(s string) (*Template, os.Error) {
 	return Parse([]byte(s))
+}
+
+func ParseFile(name string) (*Template, os.Error) {
+	b, err := ioutil.ReadFile(name)
+	if err != nil {
+		return nil, err
+	}
+	return Parse(b)
 }
