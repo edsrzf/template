@@ -137,7 +137,7 @@ func (p *parser) parseAttrs() []string {
 }
 
 func (p *parser) parseFilters() []*filter {
-	f := make([]*filter, 0, 2)
+	var f []*filter
 	for p.tok == tokFilter {
 		p.next()
 		rf, ok := filters[string(p.lit)]
