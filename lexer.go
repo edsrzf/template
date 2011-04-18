@@ -23,8 +23,6 @@ const (
 	tokBlockTagEnd     // %}
 	tokVarTagStart     // {{
 	tokVarTagEnd       // }}
-	tokCommentTagStart // {#
-	tokCommentTagEnd   // #}
 
 	tokDot      // .
 	tokFilter   // |
@@ -43,8 +41,6 @@ var tokStrings = map[token]string{
 	tokBlockTagEnd:     "%}",
 	tokVarTagStart:     "{{",
 	tokVarTagEnd:       "}}",
-	tokCommentTagStart: "{#",
-	tokCommentTagEnd:   "#}",
 	tokDot:             ".",
 	tokFilter:          "|",
 	tokArgument:        ":",
@@ -80,7 +76,6 @@ func (l *lexer) next() {
 func (l *lexer) scan() (token, string) {
 	if !l.insideTag && l.ch != '{' {
 		lit := l.scanText()
-		//println("token: text", string(lit), len(lit))
 		return tokText, lit
 	}
 	l.insideTag = true
@@ -120,7 +115,20 @@ func (l *lexer) scan() (token, string) {
 			case '{':
 				tok = tokVarTagStart
 			case '#':
-				tok = tokCommentTagStart
+				// start of a comment; scan until the end
+				l.next()
+				for {
+					for l.ch != '#' {
+						l.next()
+					}
+					l.next()
+					if l.ch == '}' {
+						l.next()
+						break
+					}
+				}
+				// TODO: probably shouldn't recurse
+				return l.scan()
 			}
 		case '%':
 			if l.ch != '}' {
@@ -134,24 +142,15 @@ func (l *lexer) scan() (token, string) {
 			}
 			l.insideTag = false
 			tok = tokVarTagEnd
-		case '#':
-			if l.ch != '}' {
-				goto illegal
-			}
-			l.insideTag = false
-			tok = tokCommentTagEnd
 		case '\'', '"':
 			tok = l.scanString(byte(ch))
-			//println("token: string", string(l.src[pos+1:l.offset-1]))
 			return tok, string(l.src[pos+1 : l.offset-1])
 		default:
 		illegal:
-			println(l.offset, len(l.src), ch)
-			panic("Illegal character")
+			panic("illegal character")
 		}
 		l.next()
 	}
-	//println("token:", tokStrings[tok], l.offset - pos, string(l.src[pos:l.offset]))
 	return tok, string(l.src[pos:l.offset])
 }
 
@@ -195,7 +194,6 @@ consume:
 		lit = l.src[l.offset:off]
 		l.offset = off
 		if l.src[l.offset] != byte(l.ch) {
-			println(string(l.src), l.offset, string(l.src[l.offset]), string(l.ch))
 			panic("Something's wrong")
 		}
 	}

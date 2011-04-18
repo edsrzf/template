@@ -46,7 +46,7 @@ func (p *parser) ParseUntil(tags ...string) (string, RenderList) {
 			r = append(r, &printLit{p.lit})
 			p.next()
 		case tokBlockTagStart:
-			p.Expect(tokBlockTagStart)
+			p.next()
 			for _, t := range tags {
 				if t == p.lit {
 					p.next()

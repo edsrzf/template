@@ -21,7 +21,7 @@ var templateTests = []templateTest{
 	templateTest{"hello", nil, "hello"},
 	templateTest{"hello{", nil, "hello{"},
 	templateTest{"hello{i", nil, "hello{i"},
-	//templateTest{"{# it's a comment #}", nil, ""},
+	templateTest{"{# it's a comment #}", nil, ""},
 	templateTest{"{{ 1 }}", nil, "1"},
 	templateTest{"{{ 3.14 }}", nil, "3.14"},
 	templateTest{"{{ 'hello' }}", nil, "hello"},
