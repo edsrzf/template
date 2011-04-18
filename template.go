@@ -94,27 +94,25 @@ func (l NodeList) Render(wr io.Writer, s Stack) {
 	}
 }
 
-type printLit struct {
-	content []byte
-}
+type printLit []byte
 
-func (p *printLit) Render(wr io.Writer, s Stack) {
-	wr.Write(p.content)
-}
-
-type printVar struct {
-	val *expr
-}
-
-func (p *printVar) Render(wr io.Writer, s Stack) {
-	v := p.val.value(s)
-	str := valueAsString(v)
-	wr.Write([]byte(str))
-}
+func (p printLit) Render(wr io.Writer, s Stack) { wr.Write([]byte(p)) }
 
 type Template struct {
 	scope *scope
 	nodes NodeList
+}
+
+// expr represents a value with possible filters
+type expr struct {
+	v       valuer
+	filters []*filter
+}
+
+func (e *expr) Render(wr io.Writer, s Stack) {
+	v := e.value(s)
+	str := valueAsString(v)
+	wr.Write([]byte(str))
 }
 
 func (t *Template) Execute(wr io.Writer, c Context) {

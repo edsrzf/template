@@ -44,7 +44,7 @@ func (p *parser) ParseUntil(tags ...string) (string, NodeList) {
 	for p.tok != tokEof {
 		switch p.tok {
 		case tokText:
-			r = append(r, &printLit{p.lit})
+			r = append(r, printLit(p.lit))
 			p.next()
 		case tokBlockTagStart:
 			p.next()
@@ -78,7 +78,7 @@ func (p *parser) parseVarTag() Node {
 	v := p.parseVar()
 	f := p.parseFilters()
 	p.Expect(tokVarTagEnd)
-	return &printVar{&expr{v, f}}
+	return &expr{v, f}
 }
 
 func (p *parser) parseVar() valuer {

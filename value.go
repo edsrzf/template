@@ -236,6 +236,13 @@ type floatLit float64
 
 func (f floatLit) value(s Stack) value { return float64(f) }
 
+// A variable represents a variable with possible attributes accessed.
+// Attributes work like this:
+// For the expression "a.b"
+// - If a is a map[string]T, this is treated as a["b"]
+// - If a is a struct or pointer to a struct, this is treated as a.b
+// - If a is a map[numeric]T, slice, array, or pointer to an array, this is treated as a[b]
+// - If the above all fail, this is treated as a method call a.b()
 type variable struct {
 	v     int
 	attrs []string
@@ -271,19 +278,6 @@ func (v *variable) value(s Stack) value {
 
 func (v *variable) set(val value, s Stack) {
 	s[v.v] = val
-}
-
-// Represents a variable with possible attributes accessed.
-// Attributes work like this:
-// For the expression "a.b"
-// - If a is a map[string]T, this is treated as a["b"]
-// - If a is a struct or pointer to a struct, this is treated as a.b
-// - If a is a map[numeric]T, slice, array, or pointer to an array, this is treated as a[b]
-// - If the above all fail, this is treated as a method call a.b()
-type expr struct {
-	// strings that are syntactically separated by a dot
-	v       valuer
-	filters []*filter
 }
 
 // Returns a true or false value for a variable
