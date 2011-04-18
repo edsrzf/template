@@ -225,6 +225,7 @@ type valuer interface {
 	value(s Stack) value
 }
 
+// Common case that works for any valuer. Some specific valuers can do this faster.
 func renderValuer(v valuer, wr io.Writer, s Stack) {
 	val := v.value(s)
 	str := valueAsString(val)
@@ -259,17 +260,11 @@ func (f floatLit) Render(wr io.Writer, s Stack) {
 // where it can be found.
 type variable int
 
-func (v variable) value(s Stack) value {
-	return s[v]
-}
+func (v variable) value(s Stack) value { return s[v] }
 
-func (v variable) set(val value, s Stack) {
-	s[v] = val
-}
+func (v variable) set(val value, s Stack) { s[v] = val }
 
-func (v variable) Render(wr io.Writer, s Stack) {
-	renderValuer(v, wr, s)
-}
+func (v variable) Render(wr io.Writer, s Stack) { renderValuer(v, wr, s) }
 
 func getVal(ref reflect.Value, specs []string) value {
 	for _, s := range specs {

@@ -12,22 +12,22 @@ type Context map[string]interface{}
 type Stack []value
 
 type scope struct {
-	levels []map[string]int
+	levels []map[string]variable
 	// the greatest number of variables this scope and its children can hold
 	maxLen int
 }
 
 func newScope() *scope {
-	return &scope{levels: []map[string]int{{}}}
+	return &scope{levels: []map[string]variable{{}}}
 }
 
-func (s *scope) top() map[string]int {
+func (s *scope) top() map[string]variable {
 	return s.levels[len(s.levels)-1]
 }
 
 // Push creates a new scope level
 func (s *scope) Push() {
-	s.levels = append(s.levels, map[string]int{})
+	s.levels = append(s.levels, map[string]variable{})
 }
 
 // Pop removes the top scope
@@ -53,14 +53,14 @@ func (s *scope) len() int {
 // most specific possible scope.
 // If the name cannot be found, it is inserted into the broadest scope and
 // the new variable number is returned.
-func (s *scope) Lookup(name string) int {
+func (s *scope) Lookup(name string) variable {
 	l := len(s.levels)
 	for i := l - 1; i >= 0; i-- {
 		if v, ok := s.levels[i][name]; ok {
 			return v
 		}
 	}
-	v := s.maxLen
+	v := variable(s.maxLen)
 	//println("inserting", name, "at level 0 as", v)
 	s.levels[0][name] = v
 	s.maxLen++
@@ -71,13 +71,13 @@ func (s *scope) Lookup(name string) int {
 // new variable number.
 // If the variable already exists in that scope, the old variable number is
 // returned.
-func (s *scope) Insert(name string) int {
+func (s *scope) Insert(name string) variable {
 	l := len(s.levels)
 	v, ok := s.levels[l-1][name]
 	if ok {
 		return v
 	}
-	v = s.len()
+	v = variable(s.len())
 	//println("inserting", name, "at level", l-1, "as", v)
 	s.levels[l-1][name] = v
 	s.maxLen++
@@ -127,10 +127,6 @@ type expr struct {
 // - Zero of any numeric type
 func (e *expr) eval(s Stack) bool {
 	v := e.value(s)
-	if v == nil {
-		return false
-	}
-
 	return valueAsBool(v)
 }
 
@@ -171,9 +167,7 @@ func (e *expr) value(s Stack) value {
 	return ret
 }
 
-func (e *expr) Render(wr io.Writer, s Stack) {
-	renderValuer(e, wr, s)
-}
+func (e *expr) Render(wr io.Writer, s Stack) { renderValuer(e, wr, s) }
 
 func (t *Template) Execute(wr io.Writer, c Context) {
 	s := make(Stack, t.scope.maxLen)

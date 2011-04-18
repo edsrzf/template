@@ -119,7 +119,7 @@ func (p *parser) parseVal() valuer {
 }
 
 func (p *parser) parseVar() variable {
-	return variable(p.s.Lookup(p.Expect(tokIdent)))
+	return p.s.Lookup(p.Expect(tokIdent))
 }
 
 func (p *parser) parseAttrs() []string {

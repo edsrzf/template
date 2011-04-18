@@ -48,7 +48,7 @@ func parseFor(p *parser) Node {
 	p.s.Push()
 	defer p.s.Pop()
 	name := p.Expect(tokIdent)
-	v := variable(p.s.Insert(name))
+	v := p.s.Insert(name)
 	p.ExpectWord("in")
 	collection := p.parseExpr()
 	switch collection.(type) {
