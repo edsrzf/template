@@ -9,7 +9,7 @@ import (
 type parser struct {
 	l   *lexer
 	tok token
-	lit string
+	lit []byte
 	s   *scope
 }
 
@@ -27,11 +27,11 @@ func (p *parser) Expect(tok token) string {
 	}
 	lit := p.lit
 	p.next()
-	return lit
+	return string(lit)
 }
 
 func (p *parser) ExpectWord(word string) {
-	if p.tok != tokIdent || p.lit != word {
+	if p.tok != tokIdent || string(p.lit) != word {
 		p.Error("expected ident %s, got token %s, %s", word, tokStrings[p.tok], p.lit)
 	}
 	p.next()
@@ -47,8 +47,9 @@ func (p *parser) ParseUntil(tags ...string) (string, RenderList) {
 			p.next()
 		case tokBlockTagStart:
 			p.next()
+			lit := string(p.lit)
 			for _, t := range tags {
-				if t == p.lit {
+				if t == lit {
 					p.next()
 					return t, r
 				}
@@ -83,14 +84,14 @@ func (p *parser) parseVar() valuer {
 	var ret valuer
 	switch p.tok {
 	case tokInt:
-		i, err := strconv.Atoi64(p.lit)
+		i, err := strconv.Atoi64(string(p.lit))
 		if err != nil {
 			p.Error("internal int error: %s", err)
 		}
 		ret = intLit(i)
 		p.next()
 	case tokFloat:
-		f, err := strconv.Atof64(p.lit)
+		f, err := strconv.Atof64(string(p.lit))
 		if err != nil {
 			p.Error("Internal float error: %s", err)
 		}
@@ -112,7 +113,7 @@ func (p *parser) parseAttrVar() *variable {
 	v.v = p.s.Lookup(p.Expect(tokIdent))
 	for p.tok == tokDot {
 		p.Expect(tokDot)
-		v.attrs = append(v.attrs, p.lit)
+		v.attrs = append(v.attrs, string(p.lit))
 		if p.tok == tokInt {
 			p.Expect(tokInt)
 		} else {
@@ -126,7 +127,7 @@ func (p *parser) parseFilters() []*filter {
 	f := make([]*filter, 0, 2)
 	for p.tok == tokFilter {
 		p.next()
-		rf, ok := filters[p.lit]
+		rf, ok := filters[string(p.lit)]
 		if !ok {
 			p.Error("filter does not exist")
 		}
@@ -152,9 +153,9 @@ func (p *parser) parseFilters() []*filter {
 	return f
 }
 
-func Parse(s string) (*Template, os.Error) {
+func Parse(s []byte) (*Template, os.Error) {
 	t := new(Template)
-	l := &lexer{src: []byte(s)}
+	l := &lexer{src: s}
 	l.init()
 	p := &parser{l: l, s: newScope()}
 
@@ -163,4 +164,8 @@ func Parse(s string) (*Template, os.Error) {
 	t.scope = p.s
 
 	return t, nil
+}
+
+func ParseString(s string) (*Template, os.Error) {
+	return Parse([]byte(s))
 }

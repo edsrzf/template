@@ -42,7 +42,7 @@ var templateTests = []templateTest{
 
 func testTemplates(t *testing.T, templates []templateTest) {
 	for i, test := range templates {
-		temp, err := Parse(test.template)
+		temp, err := ParseString(test.template)
 		if err != nil {
 			t.Errorf("#%d failed to parse: %s", i, err.String())
 		}
@@ -67,8 +67,17 @@ var bench = `<table>
 `
 
 func BenchmarkTemplateParse(b *testing.B) {
+	b.StopTimer()
+	src := []byte(bench)
+	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		Parse(bench)
+		Parse(src)
+	}
+}
+
+func BenchmarkTemplateParseString(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ParseString(bench)
 	}
 }
 
@@ -84,7 +93,7 @@ func BenchmarkTemplateExecute(b *testing.B) {
 	for i := 0; i < 1000; i++ {
 		table[i] = map[string]int{"a": 1, "b": 2, "c": 3, "d": 4, "e": 5, "f": 6, "g": 7, "h": 8, "i": 9, "j": 10}
 	}
-	t, _ := Parse(bench)
+	t, _ := ParseString(bench)
 	c := Context{"table": table}
 	w := nilWriter(0)
 	b.StartTimer()

@@ -73,7 +73,7 @@ func (l *lexer) next() {
 	}
 }
 
-func (l *lexer) scan() (token, string) {
+func (l *lexer) scan() (token, []byte) {
 	if !l.insideTag && l.ch != '{' {
 		lit := l.scanText()
 		return tokText, lit
@@ -144,14 +144,14 @@ func (l *lexer) scan() (token, string) {
 			tok = tokVarTagEnd
 		case '\'', '"':
 			tok = l.scanString(byte(ch))
-			return tok, string(l.src[pos+1 : l.offset-1])
+			return tok, l.src[pos+1 : l.offset-1]
 		default:
 		illegal:
 			panic("illegal character")
 		}
 		l.next()
 	}
-	return tok, string(l.src[pos:l.offset])
+	return tok, l.src[pos:l.offset]
 }
 
 func (l *lexer) consumeWhitespace() {
@@ -165,7 +165,7 @@ func (l *lexer) consumeWhitespace() {
 // Django outputs {%}}. It has to see the opening and the closing symbols for it to be considered a tag.
 // Godjan will return an error on this input. Disallowing this unlikely case makes
 // lexing much easier and more efficient because we don't have to look ahead.
-func (l *lexer) scanText() string {
+func (l *lexer) scanText() []byte {
 	n := len(l.src) - 1
 	off := l.offset
 	pos := 0
@@ -198,7 +198,7 @@ consume:
 		}
 	}
 	l.insideTag = true
-	return string(lit)
+	return lit
 }
 
 func (l *lexer) scanIdent() token {

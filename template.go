@@ -95,11 +95,11 @@ func (l RenderList) Render(wr io.Writer, s Stack) {
 }
 
 type printLit struct {
-	content string
+	content []byte
 }
 
 func (p *printLit) Render(wr io.Writer, s Stack) {
-	wr.Write([]byte(p.content))
+	wr.Write(p.content)
 }
 
 type printVar struct {
