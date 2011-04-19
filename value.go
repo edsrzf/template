@@ -38,21 +38,36 @@ type Value interface {
 
 type nilValue byte
 
-func (n nilValue) Bool(s Stack) bool { return false }
-func (n nilValue) Int(s Stack) int64 { return 0 }
-func (n nilValue) String(s Stack) string { return "" }
-func (n nilValue) Uint(s Stack) uint64 { return 0 }
+func (n nilValue) Bool(s Stack) bool             { return false }
+func (n nilValue) Int(s Stack) int64             { return 0 }
+func (n nilValue) String(s Stack) string         { return "" }
+func (n nilValue) Uint(s Stack) uint64           { return 0 }
 func (n nilValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(nil) }
-func (n nilValue) Render(wr io.Writer, s Stack) {}
+func (n nilValue) Render(wr io.Writer, s Stack)  {}
 
 type boolValue bool
 
 func (b boolValue) Bool(s Stack) bool { return bool(b) }
-func (b boolValue) Int(s Stack) int64 { if b { return 1 }; return 0 }
-func (b boolValue) String(s Stack) string { if b { return "true" }; return "false" }
-func (b boolValue) Uint(s Stack) uint64 { if b { return 1 }; return 0 }
+func (b boolValue) Int(s Stack) int64 {
+	if b {
+		return 1
+	}
+	return 0
+}
+func (b boolValue) String(s Stack) string {
+	if b {
+		return "true"
+	}
+	return "false"
+}
+func (b boolValue) Uint(s Stack) uint64 {
+	if b {
+		return 1
+	}
+	return 0
+}
 func (b boolValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(b) }
-func (b boolValue) Render(wr io.Writer, s Stack) { wr.Write([]byte(b.String(s))) }
+func (b boolValue) Render(wr io.Writer, s Stack)  { wr.Write([]byte(b.String(s))) }
 
 // Generic function that works for any Value. Some specific Values can do this faster.
 func renderValue(v Value, wr io.Writer, s Stack) {
@@ -85,10 +100,10 @@ func (str stringValue) Render(wr io.Writer, s Stack) { wr.Write([]byte(string(st
 
 type intValue int64
 
-func (i intValue) Bool(s Stack) bool { return i != 0 }
-func (i intValue) Int(s Stack) int64 { return int64(i) }
-func (i intValue) String(s Stack) string { return strconv.Itoa64(int64(i)) }
-func (i intValue) Uint(s Stack) uint64 { return uint64(i) }
+func (i intValue) Bool(s Stack) bool             { return i != 0 }
+func (i intValue) Int(s Stack) int64             { return int64(i) }
+func (i intValue) String(s Stack) string         { return strconv.Itoa64(int64(i)) }
+func (i intValue) Uint(s Stack) uint64           { return uint64(i) }
 func (i intValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(i) }
 
 func (i intValue) Render(wr io.Writer, s Stack) {
@@ -97,10 +112,10 @@ func (i intValue) Render(wr io.Writer, s Stack) {
 
 type floatValue float64
 
-func (f floatValue) Bool(s Stack) bool { return f != 0 }
-func (f floatValue) Int(s Stack) int64 { return int64(f) }
-func (f floatValue) String(s Stack) string { return strconv.Ftoa64(float64(f), 'g', -1) }
-func (f floatValue) Uint(s Stack) uint64 { return uint64(f) }
+func (f floatValue) Bool(s Stack) bool             { return f != 0 }
+func (f floatValue) Int(s Stack) int64             { return int64(f) }
+func (f floatValue) String(s Stack) string         { return strconv.Ftoa64(float64(f), 'g', -1) }
+func (f floatValue) Uint(s Stack) uint64           { return uint64(f) }
 func (f floatValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(f) }
 
 func (f floatValue) Render(wr io.Writer, s Stack) {
@@ -126,9 +141,9 @@ func (c complexValue) Render(wr io.Writer, s Stack) {
 // reflectValue implements the common Value methods for reflected types.
 type reflectValue reflect.Value
 
-func (v reflectValue) Bool(s Stack) bool { return reflect.Value(v).Len() != 0 }
-func (v reflectValue) Int(s Stack) int64 { return 0 }
-func (v reflectValue) Uint(s Stack) uint64 { return 0 }
+func (v reflectValue) Bool(s Stack) bool             { return reflect.Value(v).Len() != 0 }
+func (v reflectValue) Int(s Stack) int64             { return 0 }
+func (v reflectValue) Uint(s Stack) uint64           { return 0 }
 func (v reflectValue) Reflect(s Stack) reflect.Value { return reflect.Value(v) }
 
 // arrayValue represents a slice or array value
@@ -277,7 +292,7 @@ func refToVal(ref reflect.Value) Value {
 		return floatValue(ref.Float())
 	// TODO: uncomment this when issue 1716 is fixed
 	//case reflect.Complex64, reflect.Complex128:
-		//return complexValue(ref.Complex())
+	//return complexValue(ref.Complex())
 	case reflect.Array, reflect.Slice:
 		return arrayValue{reflectValue(ref)}
 	case reflect.Chan:

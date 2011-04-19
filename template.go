@@ -14,7 +14,7 @@ type Stack []Value
 type scopeLevel struct {
 	named map[string]Variable
 	// the number of anonymous variables at this level
-	anon  int
+	anon int
 }
 
 type scope struct {
@@ -188,10 +188,10 @@ func (e *expr) value(s Stack) Value {
 	return ret
 }
 
-func (e *expr) Bool(s Stack) bool { return e.value(s).Bool(s) }
-func (e *expr) Int(s Stack) int64 { return e.value(s).Int(s) }
-func (e *expr) String(s Stack) string { return e.value(s).String(s) }
-func (e *expr) Uint(s Stack) uint64 { return e.value(s).Uint(s) }
+func (e *expr) Bool(s Stack) bool             { return e.value(s).Bool(s) }
+func (e *expr) Int(s Stack) int64             { return e.value(s).Int(s) }
+func (e *expr) String(s Stack) string         { return e.value(s).String(s) }
+func (e *expr) Uint(s Stack) uint64           { return e.value(s).Uint(s) }
 func (e *expr) Reflect(s Stack) reflect.Value { return e.value(s).Reflect(s) }
 
 func (e *expr) Render(wr io.Writer, s Stack) { renderValue(e, wr, s) }
