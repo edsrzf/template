@@ -27,10 +27,26 @@ type Value interface {
 	//	- A slice, array, map, or channel with non-zero length
 	//	- Any struct
 	//	- A non-nil pointer to any of the above
-	// Any other value evaluates to false.
+	// All other values evaluate to false.
 	Bool(s Stack) bool
+	// Int coerces the Value to a signed integer. The return parameter follows these
+	// rules:
+	//	- A bool that is true evaluates to 1; false evaluates to 0
+	//	- An integer evaluates to itself, with unsigned types possibly overflowing
+	//	- A string is converted to a signed integer if possible
+	//	- A non-nil pointer to one of the above types uses 
+	// All other values evaluate to 0.
 	Int(s Stack) int64
+	// String coerces the Value to a string. The return parameter follows these rules:
+	//	- A bool returns "true" if it is true and "false" otherwise
+	//	- An integer is converted to its string representation
+	//	- A string evaluates to itself
+	//	- A non-nil pointer evaluates to whatever its element would evaluate to
+	//	according to these rules
+	// All other values evaluate to the empty string "".
 	String(s Stack) string
+	// Uint coerces the Value to an unsigned integer. It uses the same rules as
+	// Int except that negative signed integers will underflow to positive integers.
 	Uint(s Stack) uint64
 	// Reflect returns the Value's reflected value.
 	Reflect(s Stack) reflect.Value
