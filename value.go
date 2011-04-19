@@ -328,13 +328,13 @@ func lookup(v reflect.Value, s string) reflect.Value {
 			ret = v.MapIndex(reflect.NewValue(s))
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			if idx, err := strconv.Atoi64(s); err == nil {
-				idxVal := reflect.Zero(keyt)
+				idxVal := reflect.New(keyt).Elem()
 				idxVal.SetInt(idx)
 				ret = v.MapIndex(idxVal)
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 			if idx, err := strconv.Atoui64(s); err == nil {
-				idxVal := reflect.Zero(keyt)
+				idxVal := reflect.New(keyt).Elem()
 				idxVal.SetUint(idx)
 				ret = v.MapIndex(idxVal)
 			}
