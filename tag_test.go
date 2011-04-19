@@ -31,6 +31,9 @@ var tagTests = []templateTest{
 	templateTest{"{% if var %}hi{% endif %}", nil, ""},
 	templateTest{"{% if var %}hi{% endif %}", Context{"var": 1}, "hi"},
 
+	// ifchanged
+	templateTest{"{% for n in '122344' %}{% ifchanged n %}c{% endifchanged %}{% endfor %}", nil, "cccc"},
+
 	// set
 	templateTest{"{% set var1 1 %}{% set var2 'hi' %}{% set var3 3.14 %}{{ var1 }} {{ var2 }} {{ var3 }}", nil, "1 hi 3.14"},
 	templateTest{"{% set setvar var %}{{ setvar }}", Context{"var": "test"}, "test"},

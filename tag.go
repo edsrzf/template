@@ -12,6 +12,7 @@ var tags = map[string]TagFunc{
 	"firstof": parseFirstof,
 	"for":     parseFor,
 	"if":      parseIf,
+	"ifchanged":      parseIfChanged,
 	"set":     parseSet,
 	"with":    parseWith,
 }
@@ -139,6 +140,47 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 	}
 	if n == 0 && f.elseNode != nil {
 		f.elseNode.Render(wr, s)
+	}
+}
+
+type ifChangedTag struct {
+	vals  []Value
+	last  []Variable
+	nodes NodeList
+}
+
+func parseIfChanged(p *parser) Node {
+	args := make([]Value, 0, 2)
+	for p.tok != tokBlockTagEnd {
+		v := p.parseExpr()
+		args = append(args, v)
+	}
+	p.Expect(tokBlockTagEnd)
+	vars := make([]Variable, len(args))
+	for i := range vars {
+		vars[i] = p.s.Anonymous()
+	}
+	tok, nodes := p.ParseUntil("endifchanged")
+	if tok != "endifchanged" {
+		p.Error("unterminated ifchanged tag")
+	}
+	return &ifChangedTag{args, vars, nodes}
+}
+
+// TODO: On the first Render, we could get a false negative if all the
+// ifchanged expressions happen to evaluate to nilValue(0).
+func (t *ifChangedTag) Render(wr io.Writer, s Stack) {
+	changed := false
+	for i, v := range t.last {
+		val := t.vals[i].Eval(s)
+		// TODO: this comparison can panic depending on the concrete values
+		if !changed && v.Eval(s) != val {
+			changed = true
+		}
+		v.Set(val, s)
+	}
+	if changed {
+		t.nodes.Render(wr, s)
 	}
 }
 
