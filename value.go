@@ -6,11 +6,11 @@ import (
 	"strconv"
 )
 
-// value can represent a variety of types. Basic types are represented as themselves,
+// Value can represent a variety of types. Basic types are represented as themselves,
 // while composite types are represented as reflect.Value.
-type value interface{}
+type Value interface{}
 
-func valueAsBool(v value) bool {
+func valueAsBool(v Value) bool {
 	switch v := v.(type) {
 	case bool:
 		return v
@@ -58,8 +58,8 @@ func valueAsBool(v value) bool {
 	return false
 }
 
-// Convert value to string. Arrays, slices, and maps give Python-style output for Django compatibility.
-func valueAsString(v value) string {
+// Convert Value to string. Arrays, slices, and maps give Python-style output for Django compatibility.
+func valueAsString(v Value) string {
 	switch v := v.(type) {
 	case bool:
 		if v {
@@ -140,14 +140,14 @@ func valueAsString(v value) string {
 
 // If v is a string, put it in single quotes.
 // Otherwise return the string normally.
-func quoteString(v value) string {
+func quoteString(v Value) string {
 	if s, ok := v.(string); ok {
 		return "'" + s + "'"
 	}
 	return valueAsString(v)
 }
 
-func valueAsInt(v value) int64 {
+func valueAsInt(v Value) int64 {
 	switch v := v.(type) {
 	case float32:
 		return int64(v)
@@ -184,7 +184,7 @@ func valueAsInt(v value) int64 {
 	return 0
 }
 
-func valueAsUint(v value) uint64 {
+func valueAsUint(v Value) uint64 {
 	switch v := v.(type) {
 	case float32:
 		return uint64(v)
@@ -220,27 +220,27 @@ func valueAsUint(v value) uint64 {
 	return 0
 }
 
-type valuer interface {
+type Valuer interface {
 	Node
-	value(s Stack) value
+	Value(s Stack) Value
 }
 
 // Common case that works for any valuer. Some specific valuers can do this faster.
-func renderValuer(v valuer, wr io.Writer, s Stack) {
-	val := v.value(s)
+func renderValuer(v Valuer, wr io.Writer, s Stack) {
+	val := v.Value(s)
 	str := valueAsString(val)
 	wr.Write([]byte(str))
 }
 
 type stringLit string
 
-func (str stringLit) value(s Stack) value { return string(str) }
+func (str stringLit) Value(s Stack) Value { return string(str) }
 
 func (str stringLit) Render(wr io.Writer, s Stack) { wr.Write([]byte(string(str))) }
 
 type intLit int64
 
-func (i intLit) value(s Stack) value { return int64(i) }
+func (i intLit) Value(s Stack) Value { return int64(i) }
 
 func (i intLit) Render(wr io.Writer, s Stack) {
 	str := strconv.Itoa64(int64(i))
@@ -249,24 +249,23 @@ func (i intLit) Render(wr io.Writer, s Stack) {
 
 type floatLit float64
 
-func (f floatLit) value(s Stack) value { return float64(f) }
+func (f floatLit) Value(s Stack) Value { return float64(f) }
 
 func (f floatLit) Render(wr io.Writer, s Stack) {
 	str := strconv.Ftoa64(float64(f), 'g', -1)
 	wr.Write([]byte(str))
 }
 
-// A variable represents a variable. Its integer is the index in the stack
-// where it can be found.
-type variable int
+// A Variable is an index into a Template's runtime Stack.
+type Variable int
 
-func (v variable) value(s Stack) value { return s[v] }
+func (v Variable) Value(s Stack) Value { return s[v] }
 
-func (v variable) set(val value, s Stack) { s[v] = val }
+func (v Variable) Set(val Value, s Stack) { s[v] = val }
 
-func (v variable) Render(wr io.Writer, s Stack) { renderValuer(v, wr, s) }
+func (v Variable) Render(wr io.Writer, s Stack) { renderValuer(v, wr, s) }
 
-func getVal(ref reflect.Value, specs []string) value {
+func getVal(ref reflect.Value, specs []string) Value {
 	for _, s := range specs {
 		ref = lookup(ref, s)
 		if ref.Kind() == reflect.Invalid {
@@ -276,7 +275,7 @@ func getVal(ref reflect.Value, specs []string) value {
 	return refToVal(ref)
 }
 
-func refToVal(ref reflect.Value) value {
+func refToVal(ref reflect.Value) Value {
 	k := ref.Kind()
 	if reflect.Bool <= k && k <= reflect.Complex128 || k == reflect.String {
 		return ref.Interface()

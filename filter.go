@@ -8,11 +8,11 @@ import (
 	"utf8"
 )
 
-type filterFunc func(in value, s Stack, arg valuer) value
+type filterFunc func(in Value, s Stack, arg Valuer) Value
 
 type filter struct {
 	f    filterFunc
-	args valuer
+	args Valuer
 }
 
 type argType int
@@ -41,18 +41,18 @@ var filters = map[string]*regFilter{
 	"lower":          &regFilter{lowerFilter, NoArg},
 }
 
-func addFilter(in value, s Stack, arg valuer) value {
+func addFilter(in Value, s Stack, arg Valuer) Value {
 	l := valueAsInt(in)
-	r := valueAsInt(arg.value(s))
+	r := valueAsInt(arg.Value(s))
 	return l + r
 }
 
-func addslashesFilter(in value, s Stack, arg valuer) value {
+func addslashesFilter(in Value, s Stack, arg Valuer) Value {
 	str := valueAsString(in)
 	return strings.Replace(str, "'", "\\'", -1)
 }
 
-func capfirstFilter(in value, s Stack, arg valuer) value {
+func capfirstFilter(in Value, s Stack, arg Valuer) Value {
 	str := valueAsString(in)
 	if len(str) == 0 {
 		return in
@@ -66,8 +66,8 @@ func capfirstFilter(in value, s Stack, arg valuer) value {
 	return string(b)
 }
 
-func centerFilter(in value, s Stack, arg valuer) value {
-	c := valueAsInt(arg.value(s))
+func centerFilter(in Value, s Stack, arg Valuer) Value {
+	c := valueAsInt(arg.Value(s))
 	count := int(c)
 	if count <= 0 {
 		return in
@@ -90,50 +90,50 @@ func centerFilter(in value, s Stack, arg valuer) value {
 
 // Our cutFilter is slightly more forgiving than Django's. It allows the argument to be an integer.
 // {{ 123|cut:2 }} will output "13".
-func cutFilter(in value, s Stack, arg valuer) value {
+func cutFilter(in Value, s Stack, arg Valuer) Value {
 	str := valueAsString(in)
-	ch := valueAsString(arg.value(s))
+	ch := valueAsString(arg.Value(s))
 	return strings.Replace(str, ch, "", -1)
 }
 
-func dateFilter(in value, s Stack, arg valuer) value {
+func dateFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func defaultFilter(in value, s Stack, arg valuer) value {
+func defaultFilter(in Value, s Stack, arg Valuer) Value {
 	if b := valueAsBool(in); b {
 		return in
 	}
-	return valueAsString(arg.value(s))
+	return valueAsString(arg.Value(s))
 }
 
-func defaultIfNilFilter(in value, s Stack, arg valuer) value {
+func defaultIfNilFilter(in Value, s Stack, arg Valuer) Value {
 	if in != nil {
 		return in
 	}
-	return valueAsString(arg.value(s))
+	return valueAsString(arg.Value(s))
 }
 
 // Instead of taking a list of dictionaries, it takes a slice of maps
-func dictsortFilter(in value, s Stack, arg valuer) value {
+func dictsortFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
 // Instead of taking a list of dictionaries, it takes a slice of maps
-func dictsortreversedFilter(in value, s Stack, arg valuer) value {
+func dictsortreversedFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func divisiblebyFilter(in value, s Stack, arg valuer) value {
+func divisiblebyFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
 // TODO: This isn't quite right; this filter should work anywhere in a filter chain so it probably needs to be treated specially
-func escapeFilter(in value, s Stack, arg valuer) value {
+func escapeFilter(in Value, s Stack, arg Valuer) Value {
 	str := valueAsString(in)
 	// TODO: We can probably get better performance by implementing this ourselves
 	str = strings.Replace(str, "&", "&amp;", -1)
@@ -144,18 +144,18 @@ func escapeFilter(in value, s Stack, arg valuer) value {
 	return str
 }
 
-func escapejsFilter(in value, s Stack, arg valuer) value {
+func escapejsFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func filesizeformatFilter(in value, s Stack, arg valuer) value {
+func filesizeformatFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
 // Works on slices or arrays
-func firstFilter(in value, s Stack, arg valuer) value {
+func firstFilter(in Value, s Stack, arg Valuer) Value {
 	switch v := in.(type) {
 	case string:
 		_, w := utf8.DecodeRuneInString(v)
@@ -169,17 +169,17 @@ func firstFilter(in value, s Stack, arg valuer) value {
 	return in
 }
 
-func fixAmpersandsFilter(in value, s Stack, arg valuer) value {
+func fixAmpersandsFilter(in Value, s Stack, arg Valuer) Value {
 	str := valueAsString(in)
 	return strings.Replace(str, "&", "&amp;", -1)
 }
 
-func floatformatFilter(in value, s Stack, arg valuer) value {
+func floatformatFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func forceEscapeFilter(in value, s Stack, arg valuer) value {
+func forceEscapeFilter(in Value, s Stack, arg Valuer) Value {
 	str := valueAsString(in)
 	// TODO: We can probably get better performance by implementing this ourselves
 	str = strings.Replace(str, "&", "&amp;", -1)
@@ -190,23 +190,23 @@ func forceEscapeFilter(in value, s Stack, arg valuer) value {
 	return str
 }
 
-func getDigitFilter(in value, s Stack, arg valuer) value {
+func getDigitFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func iriencodeFilter(in value, s Stack, arg valuer) value {
+func iriencodeFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func joinFilter(in value, s Stack, arg valuer) value {
+func joinFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
 // Works on slices or arrays
-func lastFilter(in value, s Stack, arg valuer) value {
+func lastFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Work on strings also
 	list, ok := in.(reflect.Value)
 	if !ok || list.Kind() != reflect.Array && list.Kind() != reflect.Slice {
@@ -217,7 +217,7 @@ func lastFilter(in value, s Stack, arg valuer) value {
 	return refToVal(list.Index(len - 1))
 }
 
-func lengthFilter(in value, s Stack, arg valuer) value {
+func lengthFilter(in Value, s Stack, arg Valuer) Value {
 	switch v := in.(type) {
 	case string:
 		return len(v)
@@ -231,7 +231,7 @@ func lengthFilter(in value, s Stack, arg valuer) value {
 	return nil
 }
 
-func lengthIsFilter(in value, s Stack, arg valuer) value {
+func lengthIsFilter(in Value, s Stack, arg Valuer) Value {
 	l, ok := lengthFilter(in, s, arg).(int)
 	if !ok {
 		return false
@@ -239,7 +239,7 @@ func lengthIsFilter(in value, s Stack, arg valuer) value {
 	return int64(l) == valueAsInt(arg)
 }
 
-func linebreaksFilter(in value, s Stack, arg valuer) value {
+func linebreaksFilter(in Value, s Stack, arg Valuer) Value {
 	str, ok := in.(string)
 	if !ok {
 		return in
@@ -250,7 +250,7 @@ func linebreaksFilter(in value, s Stack, arg valuer) value {
 	return str
 }
 
-func linebreaksbrFilter(in value, s Stack, arg valuer) value {
+func linebreaksbrFilter(in Value, s Stack, arg Valuer) Value {
 	str, ok := in.(string)
 	if !ok {
 		return in
@@ -259,13 +259,13 @@ func linebreaksbrFilter(in value, s Stack, arg valuer) value {
 	return strings.Replace(str, "\n", "<br />", -1)
 }
 
-func linenumbersFilter(in value, s Stack, arg valuer) value {
+func linenumbersFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func ljustFilter(in value, s Stack, arg valuer) value {
-	count := int(valueAsInt(arg.value(s)))
+func ljustFilter(in Value, s Stack, arg Valuer) Value {
+	count := int(valueAsInt(arg.Value(s)))
 	if count <= 0 {
 		return in
 	}
@@ -278,7 +278,7 @@ func ljustFilter(in value, s Stack, arg valuer) value {
 	return str + strings.Repeat(" ", count)
 }
 
-func lowerFilter(in value, s Stack, arg valuer) value {
+func lowerFilter(in Value, s Stack, arg Valuer) Value {
 	str, ok := in.(string)
 	if !ok {
 		return in
@@ -287,20 +287,20 @@ func lowerFilter(in value, s Stack, arg valuer) value {
 	return str
 }
 
-func makeListFilter(in value, s Stack, arg valuer) value {
+func makeListFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func phone2numericFilter(in value, s Stack, arg valuer) value {
+func phone2numericFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func pluralizeFilter(in value, s Stack, arg valuer) value {
+func pluralizeFilter(in Value, s Stack, arg Valuer) Value {
 	var single string
 	var plural string
-	suffix := valueAsString(arg.value(s))
+	suffix := valueAsString(arg.Value(s))
 	if suffix == "" {
 		plural = "s"
 	} else {
@@ -319,23 +319,23 @@ func pluralizeFilter(in value, s Stack, arg valuer) value {
 	return single
 }
 
-func pprintFilter(in value, s Stack, arg valuer) value {
+func pprintFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func randomFilter(in value, s Stack, arg valuer) value {
+func randomFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func removeTagsFilter(in value, s Stack, arg valuer) value {
+func removeTagsFilter(in Value, s Stack, arg Valuer) Value {
 	// TODO: Implement
 	return in
 }
 
-func rjustFilter(in value, s Stack, arg valuer) value {
-	count := int(valueAsInt(arg.value(s)))
+func rjustFilter(in Value, s Stack, arg Valuer) Value {
+	count := int(valueAsInt(arg.Value(s)))
 	if count <= 0 {
 		return in
 	}

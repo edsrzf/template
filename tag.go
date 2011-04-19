@@ -15,7 +15,7 @@ var tags = map[string]TagFunc{
 	"with":    parseWith,
 }
 
-type firstofTag []valuer
+type firstofTag []Valuer
 
 func parseFirstof(p *parser) Node {
 	var f firstofTag
@@ -27,9 +27,9 @@ func parseFirstof(p *parser) Node {
 }
 
 func (f firstofTag) Render(wr io.Writer, s Stack) {
-	var v value
+	var v Value
 	for _, val := range f {
-		v = val.value(s)
+		v = val.Value(s)
 		if valueAsBool(v) {
 			str := valueAsString(v)
 			wr.Write([]byte(str))
@@ -39,8 +39,8 @@ func (f firstofTag) Render(wr io.Writer, s Stack) {
 }
 
 type forTag struct {
-	v          variable
-	collection valuer
+	v          Variable
+	collection Valuer
 	r          Node
 	elseNode   Node
 }
@@ -69,15 +69,15 @@ func parseFor(p *parser) Node {
 	return &forTag{v, collection, r, elseNode}
 }
 
-// TODO: this needs reworking. We need a good way to set variables on the stack.
+// TODO: this needs reworking. We need a good way to set Variables on the stack.
 func (f *forTag) Render(wr io.Writer, s Stack) {
-	v := f.collection.value(s)
+	v := f.collection.Value(s)
 	n := 0
 	switch v := v.(type) {
 	case string:
 		n = len(v)
 		for _, c := range v {
-			f.v.set(string(c), s)
+			f.v.Set(string(c), s)
 			f.r.Render(wr, s)
 		}
 	case reflect.Value:
@@ -86,7 +86,7 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 		case reflect.Array, reflect.Slice:
 			n = v.Len()
 			for i := 0; i < n; i++ {
-				f.v.set(refToVal(v.Index(i)), s)
+				f.v.Set(refToVal(v.Index(i)), s)
 				f.r.Render(wr, s)
 			}
 		case reflect.Chan:
@@ -95,20 +95,20 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 				if !ok {
 					break
 				}
-				f.v.set(refToVal(x), s)
+				f.v.Set(refToVal(x), s)
 				f.r.Render(wr, s)
 				n++
 			}
 		case reflect.Map:
 			n = v.Len()
 			for _, k := range v.MapKeys() {
-				f.v.set(refToVal(v.MapIndex(k)), s)
+				f.v.Set(refToVal(v.MapIndex(k)), s)
 				f.r.Render(wr, s)
 			}
 		case reflect.Struct:
 			n = v.NumField()
 			for i := 0; i < n; i++ {
-				f.v.set(refToVal(v.Field(i)), s)
+				f.v.Set(refToVal(v.Field(i)), s)
 				f.r.Render(wr, s)
 			}
 		}
@@ -119,8 +119,8 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 }
 
 type setTag struct {
-	v variable
-	e valuer
+	v Variable
+	e Valuer
 }
 
 func parseSet(p *parser) Node {
@@ -131,7 +131,7 @@ func parseSet(p *parser) Node {
 }
 
 func (t *setTag) Render(wr io.Writer, s Stack) {
-	t.v.set(t.e.value(s), s)
+	t.v.Set(t.e.Value(s), s)
 }
 
 type with NodeList

@@ -9,25 +9,25 @@ import (
 
 type Context map[string]interface{}
 
-type Stack []value
+type Stack []Value
 
 type scope struct {
-	levels []map[string]variable
-	// the greatest number of variables this scope and its children can hold
+	levels []map[string]Variable
+	// the greatest number of Variables this scope and its children can hold
 	maxLen int
 }
 
 func newScope() *scope {
-	return &scope{levels: []map[string]variable{{}}}
+	return &scope{levels: []map[string]Variable{{}}}
 }
 
-func (s *scope) top() map[string]variable {
+func (s *scope) top() map[string]Variable {
 	return s.levels[len(s.levels)-1]
 }
 
 // Push creates a new scope level
 func (s *scope) Push() {
-	s.levels = append(s.levels, map[string]variable{})
+	s.levels = append(s.levels, map[string]Variable{})
 }
 
 // Pop removes the top scope
@@ -49,40 +49,46 @@ func (s *scope) len() int {
 	return l
 }
 
-// Lookup returns the variable number for the given variable name from the
-// most specific possible scope.
+// Lookup returns the Variable for the given name from the most specific
+// possible scope.
 // If the name cannot be found, it is inserted into the broadest scope and
-// the new variable number is returned.
-func (s *scope) Lookup(name string) variable {
+// the new Variable is returned.
+func (s *scope) Lookup(name string) Variable {
 	l := len(s.levels)
 	for i := l - 1; i >= 0; i-- {
 		if v, ok := s.levels[i][name]; ok {
 			return v
 		}
 	}
-	v := variable(s.maxLen)
+	v := Variable(s.maxLen)
 	s.levels[0][name] = v
 	s.maxLen++
 	return v
 }
 
-// Insert creates a new variable at the top scope and returns the
-// new variable number.
-// If the variable already exists in that scope, the old variable number is
+// Insert creates a new Variable at the top scope and returns it.
+// If the Variable already exists in that scope, the existing Variable is
 // returned.
-func (s *scope) Insert(name string) variable {
+func (s *scope) Insert(name string) Variable {
 	l := len(s.levels)
 	v, ok := s.levels[l-1][name]
 	if ok {
 		return v
 	}
-	v = variable(s.len())
+	v = Variable(s.len())
 	s.levels[l-1][name] = v
 	s.maxLen++
 	return v
 }
 
+// A Node represents a part of the Template, such as a tag or a block of text.
 type Node interface {
+	// Render evaluates the node with the given Stack and writes the result to
+	// wr.
+	// Render should be reentrant. If the Node needs to store state, it should
+	// allocate a Variable on the stack during parsing and use that Variable.
+	// The parameter s should only be used when calling a Valuer's Value method.
+	// Nodes should not access s directly.
 	Render(wr io.Writer, s Stack)
 }
 
@@ -103,7 +109,7 @@ type Template struct {
 	nodes NodeList
 }
 
-// expr represents a value with possible attributes and filters.
+// expr represents a Value with possible attributes and filters.
 // Attributes work like this:
 // For the expression "a.b"
 // - If a is a map[string]T, this is treated as a["b"]
@@ -111,28 +117,28 @@ type Template struct {
 // - If a is a map[numeric]T, slice, array, or pointer to an array, this is treated as a[b]
 // - If the above all fail, this is treated as a method call a.b()
 type expr struct {
-	v       valuer
+	v       Valuer
 	attrs   []string
 	filters []*filter
 }
 
-// Returns a true or false value for a variable
-// false values include:
+// Returns a true or false Value for an expression.
+// false Values include:
 // - nil
 // - A slice, map, channel, array, or pointer to an array with zero len
-// - The bool value false
+// - The bool Value false
 // - An empty string
 // - Zero of any numeric type
 func (e *expr) eval(s Stack) bool {
-	v := e.value(s)
+	v := e.Value(s)
 	return valueAsBool(v)
 }
 
-func (e *expr) value(s Stack) value {
-	val := e.v.value(s)
+func (e *expr) Value(s Stack) Value {
+	val := e.v.Value(s)
 
 	// apply attributes
-	var ret value
+	var ret Value
 	switch val := val.(type) {
 	case bool, float32, float64, complex64, complex128, int, int8, int16, int32, int64,
 		uint, uint8, uint16, uint32, uint64, uintptr, nil:

@@ -5,7 +5,7 @@ import (
 )
 
 type ifTag struct {
-	cond     valuer
+	cond     Valuer
 	ifNode   Node
 	elseNode Node
 }
@@ -31,7 +31,7 @@ func parseIf(p *parser) Node {
 }
 
 func (i *ifTag) Render(wr io.Writer, s Stack) {
-	if valueAsBool(i.cond.value(s)) {
+	if valueAsBool(i.cond.Value(s)) {
 		i.ifNode.Render(wr, s)
 	} else if i.elseNode != nil {
 		i.elseNode.Render(wr, s)
@@ -42,29 +42,29 @@ type condition interface {
 	eval(s Stack) bool
 }
 
-func parseCondition(p *parser) valuer {
+func parseCondition(p *parser) Valuer {
 	return p.parseExpr()
 }
 
 type equal struct {
-	left, right *variable
+	left, right *expr
 }
 
 func (e *equal) eval(s Stack) bool {
 	// TODO: Make sure types are comparable
-	l := e.left.value(s)
-	r := e.right.value(s)
+	l := e.left.Value(s)
+	r := e.right.Value(s)
 	return l == r
 }
 
 type nequal struct {
-	left, right *variable
+	left, right *expr
 }
 
 func (n *nequal) eval(s Stack) bool {
 	// TODO: Make sure types are comparable
-	l := n.left.value(s)
-	r := n.right.value(s)
+	l := n.left.Value(s)
+	r := n.right.Value(s)
 	return l != r
 }
 
