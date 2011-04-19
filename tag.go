@@ -144,9 +144,10 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 }
 
 type ifChangedTag struct {
-	vals  []Value
-	last  []Variable
-	nodes NodeList
+	vals      []Value
+	last      []Variable
+	ifNodes   NodeList
+	elseNodes NodeList
 }
 
 func parseIfChanged(p *parser) Node {
@@ -160,11 +161,16 @@ func parseIfChanged(p *parser) Node {
 	for i := range vars {
 		vars[i] = p.s.Anonymous()
 	}
-	tok, nodes := p.ParseUntil("endifchanged")
+	tok, ifNodes := p.ParseUntil("else", "endifchanged")
+	var elseNodes NodeList
+	if tok == "else" {
+		p.Expect(tokBlockTagEnd)
+		tok, elseNodes = p.ParseUntil("endifchanged")
+	}
 	if tok != "endifchanged" {
 		p.Error("unterminated ifchanged tag")
 	}
-	return &ifChangedTag{args, vars, nodes}
+	return &ifChangedTag{args, vars, ifNodes, elseNodes}
 }
 
 // TODO: On the first Render, we could get a false negative if all the
@@ -180,7 +186,9 @@ func (t *ifChangedTag) Render(wr io.Writer, s Stack) {
 		v.Set(val, s)
 	}
 	if changed {
-		t.nodes.Render(wr, s)
+		t.ifNodes.Render(wr, s)
+	} else if t.elseNodes != nil {
+		t.elseNodes.Render(wr, s)
 	}
 }
 
