@@ -79,9 +79,6 @@ func (l *lexer) scan() (token, []byte) {
 		return tokText, lit
 	}
 	l.insideTag = true
-	// Another divergence from Django is that we allow spaces between all tokens. So
-	// {{ var . 1 }}
-	// is a valid template and does what you would expect. Django doesn't allow this.
 	l.consumeWhitespace()
 
 	pos := l.offset
@@ -160,11 +157,6 @@ func (l *lexer) consumeWhitespace() {
 	}
 }
 
-// There's a known incompatibility here for a template such as:
-// {%{##}}}
-// Django outputs {%}}. It has to see the opening and the closing symbols for it to be considered a tag.
-// Godjan will return an error on this input. Disallowing this unlikely case makes
-// lexing much easier and more efficient because we don't have to look ahead.
 func (l *lexer) scanText() []byte {
 	n := len(l.src) - 1
 	off := l.offset

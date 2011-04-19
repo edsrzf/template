@@ -87,8 +87,6 @@ func centerFilter(in Value, s Stack, arg Value) Value {
 	return stringValue(strings.Repeat(" ", half) + str + strings.Repeat(" ", count))
 }
 
-// Our cutFilter is slightly more forgiving than Django's. It allows the argument to be an integer.
-// {{ 123|cut:2 }} will output "13".
 func cutFilter(in Value, s Stack, arg Value) Value {
 	str := in.String(s)
 	ch := arg.String(s)
