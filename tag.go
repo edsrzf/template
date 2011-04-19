@@ -8,6 +8,7 @@ import (
 type TagFunc func(p *parser) Node
 
 var tags = map[string]TagFunc{
+	"cycle":   parseCycle,
 	"firstof": parseFirstof,
 	"for":     parseFor,
 	"if":      parseIf,
@@ -15,15 +16,43 @@ var tags = map[string]TagFunc{
 	"with":    parseWith,
 }
 
+type cycleTag struct {
+	args  []Node
+	state Variable
+}
+
+func parseCycle(p *parser) Node {
+	args := make([]Node, 0, 2)
+	for p.tok != tokBlockTagEnd {
+		v := p.parseExpr()
+		args = append(args, v)
+	}
+	if len(args) < 1 {
+		p.Error("the cycle tag requires at least one parameter")
+	}
+	state := p.s.Anonymous()
+	return &cycleTag{args, state}
+}
+
+func (c cycleTag) Render(wr io.Writer, s Stack) {
+	i := valueAsInt(c.state.Value(s))
+	c.args[i].Render(wr, s)
+	i++
+	if int(i) >= len(c.args) {
+		i = 0
+	}
+	c.state.Set(i, s)
+}
+
 type firstofTag []Valuer
 
 func parseFirstof(p *parser) Node {
-	var f firstofTag
+	tag := make(firstofTag, 0, 2)
 	for p.tok != tokBlockTagEnd {
 		v := p.parseExpr()
-		f = append(f, v)
+		tag = append(tag, v)
 	}
-	return f
+	return tag
 }
 
 func (f firstofTag) Render(wr io.Writer, s Stack) {
@@ -31,8 +60,7 @@ func (f firstofTag) Render(wr io.Writer, s Stack) {
 	for _, val := range f {
 		v = val.Value(s)
 		if valueAsBool(v) {
-			str := valueAsString(v)
-			wr.Write([]byte(str))
+			val.Render(wr, s)
 			return
 		}
 	}

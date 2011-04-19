@@ -5,6 +5,9 @@ import (
 )
 
 var tagTests = []templateTest{
+	// cycle
+	templateTest{"{% for c in 'abcd' %}{% cycle 1 'a' var %}{% endfor %}", Context{"var": 3.14}, "1a3.141"},
+
 	// firstof
 	templateTest{"{% firstof %}", nil, ""},
 	templateTest{"{% firstof var %}", nil, ""},

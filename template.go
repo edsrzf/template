@@ -11,23 +11,29 @@ type Context map[string]interface{}
 
 type Stack []Value
 
+type scopeLevel struct {
+	named map[string]Variable
+	// the number of anonymous variables at this level
+	anon  int
+}
+
 type scope struct {
-	levels []map[string]Variable
+	levels []scopeLevel
 	// the greatest number of Variables this scope and its children can hold
 	maxLen int
 }
 
 func newScope() *scope {
-	return &scope{levels: []map[string]Variable{{}}}
+	return &scope{levels: []scopeLevel{{named: map[string]Variable{}}}}
 }
 
 func (s *scope) top() map[string]Variable {
-	return s.levels[len(s.levels)-1]
+	return s.levels[len(s.levels)-1].named
 }
 
 // Push creates a new scope level
 func (s *scope) Push() {
-	s.levels = append(s.levels, map[string]Variable{})
+	s.levels = append(s.levels, scopeLevel{named: map[string]Variable{}})
 }
 
 // Pop removes the top scope
@@ -41,10 +47,12 @@ func (s *scope) Pop() {
 	s.levels = s.levels[:len(s.levels)-1]
 }
 
+// len returns the number of variables that need to be allocated for the
+// current stack of scopes.
 func (s *scope) len() int {
 	l := 0
 	for _, level := range s.levels {
-		l += len(level)
+		l += len(level.named) + level.anon
 	}
 	return l
 }
@@ -56,12 +64,12 @@ func (s *scope) len() int {
 func (s *scope) Lookup(name string) Variable {
 	l := len(s.levels)
 	for i := l - 1; i >= 0; i-- {
-		if v, ok := s.levels[i][name]; ok {
+		if v, ok := s.levels[i].named[name]; ok {
 			return v
 		}
 	}
 	v := Variable(s.maxLen)
-	s.levels[0][name] = v
+	s.levels[0].named[name] = v
 	s.maxLen++
 	return v
 }
@@ -71,12 +79,22 @@ func (s *scope) Lookup(name string) Variable {
 // returned.
 func (s *scope) Insert(name string) Variable {
 	l := len(s.levels)
-	v, ok := s.levels[l-1][name]
+	v, ok := s.levels[l-1].named[name]
 	if ok {
 		return v
 	}
 	v = Variable(s.len())
-	s.levels[l-1][name] = v
+	s.levels[l-1].named[name] = v
+	s.maxLen++
+	return v
+}
+
+// Anonymous creates a new anonymous Variable at the top scope and returns it.
+// This is useful for Nodes that might Render more than once and want to
+// store state between Renders.
+func (s *scope) Anonymous() Variable {
+	v := Variable(s.len())
+	s.levels[len(s.levels)-1].anon++
 	s.maxLen++
 	return v
 }
