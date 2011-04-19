@@ -19,10 +19,10 @@ const (
 
 	tokText // text not inside a tag
 
-	tokBlockTagStart   // {%
-	tokBlockTagEnd     // %}
-	tokVarTagStart     // {{
-	tokVarTagEnd       // }}
+	tokBlockTagStart // {%
+	tokBlockTagEnd   // %}
+	tokVarTagStart   // {{
+	tokVarTagEnd     // }}
 
 	tokDot      // .
 	tokFilter   // |
@@ -30,20 +30,20 @@ const (
 )
 
 var tokStrings = map[token]string{
-	tokIllegal:         "illegal",
-	tokEof:             "eof",
-	tokIdent:           "ident",
-	tokInt:             "int",
-	tokFloat:           "float",
-	tokString:          "string",
-	tokText:            "text",
-	tokBlockTagStart:   "{%",
-	tokBlockTagEnd:     "%}",
-	tokVarTagStart:     "{{",
-	tokVarTagEnd:       "}}",
-	tokDot:             ".",
-	tokFilter:          "|",
-	tokArgument:        ":",
+	tokIllegal:       "illegal",
+	tokEof:           "eof",
+	tokIdent:         "ident",
+	tokInt:           "int",
+	tokFloat:         "float",
+	tokString:        "string",
+	tokText:          "text",
+	tokBlockTagStart: "{%",
+	tokBlockTagEnd:   "%}",
+	tokVarTagStart:   "{{",
+	tokVarTagEnd:     "}}",
+	tokDot:           ".",
+	tokFilter:        "|",
+	tokArgument:      ":",
 }
 
 type lexer struct {
