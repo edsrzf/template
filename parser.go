@@ -82,7 +82,7 @@ func (p *parser) parseVarTag() Node {
 	return e
 }
 
-func (p *parser) parseExpr() Valuer {
+func (p *parser) parseExpr() Value {
 	v := p.parseVal()
 	a := p.parseAttrs()
 	f := p.parseFilters()
@@ -92,25 +92,25 @@ func (p *parser) parseExpr() Valuer {
 	return &expr{v, a, f}
 }
 
-func (p *parser) parseVal() Valuer {
-	var ret Valuer
+func (p *parser) parseVal() Value {
+	var ret Value
 	switch p.tok {
 	case tokInt:
 		i, err := strconv.Atoi64(string(p.lit))
 		if err != nil {
 			p.Error("internal int error: %s", err)
 		}
-		ret = intLit(i)
+		ret = intValue(i)
 		p.next()
 	case tokFloat:
 		f, err := strconv.Atof64(string(p.lit))
 		if err != nil {
 			p.Error("Internal float error: %s", err)
 		}
-		ret = floatLit(f)
+		ret = floatValue(f)
 		p.next()
 	case tokString:
-		ret = stringLit(p.lit)
+		ret = stringValue(p.lit)
 		p.next()
 	case tokIdent:
 		ret = p.parseVar()
@@ -147,7 +147,7 @@ func (p *parser) parseFilters() []*filter {
 			p.Error("filter does not exist")
 		}
 		p.Expect(tokIdent)
-		var val Valuer
+		var val Value
 		args := false
 		switch rf.arg {
 		case ReqArg:

@@ -6,282 +6,292 @@ import (
 	"strconv"
 )
 
-// Value can represent a variety of types. Basic types are represented as themselves,
-// while composite types are represented as reflect.Value.
-type Value interface{}
-
-func valueAsBool(v Value) bool {
-	switch v := v.(type) {
-	case bool:
-		return v
-	case float32:
-		return v != 0
-	case float64:
-		return v != 0
-	case complex64:
-		return v != 0
-	case complex128:
-		return v != 0
-	case int:
-		return v != 0
-	case int16:
-		return v != 0
-	case int32:
-		return v != 0
-	case int64:
-		return v != 0
-	case uint:
-		return v != 0
-	case uint8:
-		return v != 0
-	case uint16:
-		return v != 0
-	case uint32:
-		return v != 0
-	case uint64:
-		return v != 0
-	case uintptr:
-		return v != 0
-	case string:
-		return v != ""
-	case reflect.Value:
-		switch v.Kind() {
-		case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice:
-			return v.Len() != 0
-		case reflect.Ptr:
-			return !v.IsNil()
-		case reflect.Struct:
-			// TODO: Can we do any better?
-			return true
-		}
-	}
-	return false
-}
-
-// Convert Value to string. Arrays, slices, and maps give Python-style output for Django compatibility.
-func valueAsString(v Value) string {
-	switch v := v.(type) {
-	case bool:
-		if v {
-			return "True"
-		}
-		return "False"
-	case float32:
-		return strconv.Ftoa32(v, 'g', -1)
-	case float64:
-		return strconv.Ftoa64(v, 'g', -1)
-	case complex64:
-		return strconv.Ftoa32(real(v), 'g', -1) + "+" + strconv.Ftoa32(imag(v), 'g', -1)
-	case complex128:
-		return strconv.Ftoa64(real(v), 'g', -1) + "+" + strconv.Ftoa64(imag(v), 'g', -1)
-	case int:
-		return strconv.Itoa(v)
-	case int8:
-		return strconv.Itoa(int(v))
-	case int16:
-		return strconv.Itoa(int(v))
-	case int32:
-		return strconv.Itoa(int(v))
-	case int64:
-		return strconv.Itoa64(v)
-	case uint:
-		return strconv.Uitoa(v)
-	case uint8:
-		return strconv.Uitoa(uint(v))
-	case uint16:
-		return strconv.Uitoa(uint(v))
-	case uint32:
-		return strconv.Uitoa(uint(v))
-	case uint64:
-		return strconv.Uitoa64(v)
-	case uintptr:
-		return strconv.Uitoa64(uint64(v))
-	case string:
-		return v
-	case reflect.Value:
-		switch v.Kind() {
-		case reflect.Array, reflect.Slice:
-			str := "["
-			for i := 0; i < v.Len(); i++ {
-				if i > 0 {
-					str += ", "
-				}
-				str1 := quoteString(refToVal(v.Index(i)))
-				str += str1
-			}
-			str += "]"
-			return str
-
-		case reflect.Map:
-			keys := v.MapKeys()
-			str := "{"
-			for i, key := range keys {
-				if i > 0 {
-					str += ", "
-				}
-				v1 := refToVal(key)
-				str1 := quoteString(v1)
-				str += str1
-				str += ": "
-				v1 = refToVal(v.MapIndex(key))
-				str1 = quoteString(v1)
-				str += str1
-			}
-			str += "}"
-			return str
-
-		case reflect.Ptr:
-			// just print whatever the pointer points to
-			return valueAsString(v.Elem())
-		}
-	}
-	return ""
-}
-
 // If v is a string, put it in single quotes.
 // Otherwise return the string normally.
-func quoteString(v Value) string {
-	if s, ok := v.(string); ok {
-		return "'" + s + "'"
+func quoteString(v Value, s Stack) string {
+	if s, ok := v.(stringValue); ok {
+		return "'" + string(s) + "'"
 	}
-	return valueAsString(v)
+	return v.String(s)
 }
 
-func valueAsInt(v Value) int64 {
-	switch v := v.(type) {
-	case float32:
-		return int64(v)
-	case float64:
-		return int64(v)
-	case int:
-		return int64(v)
-	case int8:
-		return int64(v)
-	case int16:
-		return int64(v)
-	case int32:
-		return int64(v)
-	case int64:
-		return v
-	case uint:
-		return int64(v)
-	case uint8:
-		return int64(v)
-	case uint16:
-		return int64(v)
-	case uint32:
-		return int64(v)
-	case uint64:
-		return int64(v)
-	case uintptr:
-		return int64(v)
-	case string:
-		u, err := strconv.Atoi64(v)
-		if err == nil {
-			return u
-		}
-	}
-	return 0
-}
+// TODO: should there be a Float method on Value?
 
-func valueAsUint(v Value) uint64 {
-	switch v := v.(type) {
-	case float32:
-		return uint64(v)
-	case float64:
-		return uint64(v)
-	case int:
-		return uint64(v)
-	case int8:
-		return uint64(v)
-	case int16:
-		return uint64(v)
-	case int32:
-		return uint64(v)
-	case int64:
-		return uint64(v)
-	case uint:
-		return uint64(v)
-	case uint8:
-		return uint64(v)
-	case uint16:
-		return uint64(v)
-	case uint32:
-		return uint64(v)
-	case uint64:
-		return v
-	case uintptr:
-		return uint64(v)
-	case string:
-		if u, err := strconv.Atoui64(v); err == nil {
-			return u
-		}
-	}
-	return 0
-}
-
-type Valuer interface {
+// A Value represents a generic value of any type.
+type Value interface {
 	Node
-	Value(s Stack) Value
+	// Bool coerces the Value to a boolean. Values that are true are:
+	//	- A bool that is true
+	//	- A non-zero integer
+	//	- A non-empty string
+	//	- A slice, array, map, or channel with non-zero length
+	//	- Any struct
+	//	- A non-nil pointer to any of the above
+	// Any other value evaluates to false.
+	Bool(s Stack) bool
+	Int(s Stack) int64
+	String(s Stack) string
+	Uint(s Stack) uint64
+	// Reflect returns the Value's reflected value.
+	Reflect(s Stack) reflect.Value
 }
 
-// Common case that works for any valuer. Some specific valuers can do this faster.
-func renderValuer(v Valuer, wr io.Writer, s Stack) {
-	val := v.Value(s)
-	str := valueAsString(val)
-	wr.Write([]byte(str))
+type nilValue byte
+
+func (n nilValue) Bool(s Stack) bool { return false }
+func (n nilValue) Int(s Stack) int64 { return 0 }
+func (n nilValue) String(s Stack) string { return "" }
+func (n nilValue) Uint(s Stack) uint64 { return 0 }
+func (n nilValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(nil) }
+func (n nilValue) Render(wr io.Writer, s Stack) {}
+
+type boolValue bool
+
+func (b boolValue) Bool(s Stack) bool { return bool(b) }
+func (b boolValue) Int(s Stack) int64 { if b { return 1 }; return 0 }
+func (b boolValue) String(s Stack) string { if b { return "true" }; return "false" }
+func (b boolValue) Uint(s Stack) uint64 { if b { return 1 }; return 0 }
+func (b boolValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(b) }
+func (b boolValue) Render(wr io.Writer, s Stack) { wr.Write([]byte(b.String(s))) }
+
+// Generic function that works for any Value. Some specific Values can do this faster.
+func renderValue(v Value, wr io.Writer, s Stack) {
+	wr.Write([]byte(v.String(s)))
 }
 
-type stringLit string
+type stringValue string
 
-func (str stringLit) Value(s Stack) Value { return string(str) }
+func (str stringValue) Bool(s Stack) bool { return str != "" }
 
-func (str stringLit) Render(wr io.Writer, s Stack) { wr.Write([]byte(string(str))) }
-
-type intLit int64
-
-func (i intLit) Value(s Stack) Value { return int64(i) }
-
-func (i intLit) Render(wr io.Writer, s Stack) {
-	str := strconv.Itoa64(int64(i))
-	wr.Write([]byte(str))
+func (str stringValue) Int(s Stack) int64 {
+	if i, err := strconv.Atoi64(string(str)); err == nil {
+		return i
+	}
+	return 0
 }
 
-type floatLit float64
+func (str stringValue) String(s Stack) string { return string(str) }
 
-func (f floatLit) Value(s Stack) Value { return float64(f) }
-
-func (f floatLit) Render(wr io.Writer, s Stack) {
-	str := strconv.Ftoa64(float64(f), 'g', -1)
-	wr.Write([]byte(str))
+func (str stringValue) Uint(s Stack) uint64 {
+	if i, err := strconv.Atoui64(string(str)); err == nil {
+		return i
+	}
+	return 0
 }
+
+func (str stringValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(str) }
+
+func (str stringValue) Render(wr io.Writer, s Stack) { wr.Write([]byte(string(str))) }
+
+type intValue int64
+
+func (i intValue) Bool(s Stack) bool { return i != 0 }
+func (i intValue) Int(s Stack) int64 { return int64(i) }
+func (i intValue) String(s Stack) string { return strconv.Itoa64(int64(i)) }
+func (i intValue) Uint(s Stack) uint64 { return uint64(i) }
+func (i intValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(i) }
+
+func (i intValue) Render(wr io.Writer, s Stack) {
+	wr.Write([]byte(i.String(s)))
+}
+
+type floatValue float64
+
+func (f floatValue) Bool(s Stack) bool { return f != 0 }
+func (f floatValue) Int(s Stack) int64 { return int64(f) }
+func (f floatValue) String(s Stack) string { return strconv.Ftoa64(float64(f), 'g', -1) }
+func (f floatValue) Uint(s Stack) uint64 { return uint64(f) }
+func (f floatValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(f) }
+
+func (f floatValue) Render(wr io.Writer, s Stack) {
+	wr.Write([]byte(f.String(s)))
+}
+
+/*
+TODO: uncomment this when issue 1716 is fixed
+type complexValue complex128
+
+func (c complexValue) Bool(s Stack) bool { return c != 0 }
+func (c complexValue) Int(s Stack) bool { return 0 }
+// TODO: implement
+func (c complexValue) String(s Stack) bool { return "" }
+func (c complexValue) Uint(s Stack) bool { return 0 }
+func (c complexValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(c) }
+
+func (c complexValue) Render(wr io.Writer, s Stack) {
+	wr.Write([]byte(c.String(s)))
+}
+*/
+
+// reflectValue implements the common Value methods for reflected types.
+type reflectValue reflect.Value
+
+func (v reflectValue) Bool(s Stack) bool { return reflect.Value(v).Len() != 0 }
+func (v reflectValue) Int(s Stack) int64 { return 0 }
+func (v reflectValue) Uint(s Stack) uint64 { return 0 }
+func (v reflectValue) Reflect(s Stack) reflect.Value { return reflect.Value(v) }
+
+// arrayValue represents a slice or array value
+type arrayValue struct {
+	reflectValue
+}
+
+func (a arrayValue) String(s Stack) string {
+	v := reflect.Value(a.reflectValue)
+	str := "["
+	for i := 0; i < v.Len(); i++ {
+		if i > 0 {
+			str += ", "
+		}
+		str1 := quoteString(refToVal(v.Index(i)), s)
+		str += str1
+	}
+	str += "]"
+	return str
+}
+func (a arrayValue) Render(wr io.Writer, s Stack) { renderValue(a, wr, s) }
+
+type mapValue struct {
+	reflectValue
+}
+
+func (m mapValue) String(s Stack) string {
+	v := reflect.Value(m.reflectValue)
+	keys := v.MapKeys()
+	str := "{"
+	for i, key := range keys {
+		if i > 0 {
+			str += ", "
+		}
+		v1 := refToVal(key)
+		str1 := quoteString(v1, s)
+		str += str1
+		str += ": "
+		v1 = refToVal(v.MapIndex(key))
+		str1 = quoteString(v1, s)
+		str += str1
+	}
+	str += "}"
+	return str
+}
+func (m mapValue) Render(wr io.Writer, s Stack) { renderValue(m, wr, s) }
+
+type chanValue struct {
+	reflectValue
+}
+
+func (c chanValue) String(s Stack) string {
+	// TODO: implement
+	return ""
+}
+func (c chanValue) Render(wr io.Writer, s Stack) { renderValue(c, wr, s) }
+
+type structValue struct {
+	reflectValue
+}
+
+func (st structValue) Bool(s Stack) bool { return true }
+func (st structValue) String(s Stack) string {
+	// TODO: implement
+	return ""
+}
+func (st structValue) Render(wr io.Writer, s Stack) { renderValue(st, wr, s) }
+
+type pointerValue struct {
+	reflectValue
+}
+
+func (p pointerValue) value() Value { return refToVal(reflect.Value(p.reflectValue).Elem()) }
+// TODO: correct
+func (p pointerValue) Bool(s Stack) bool { return !reflect.Value(p.reflectValue).IsNil() }
+func (p pointerValue) String(s Stack) string {
+	if reflect.Value(p.reflectValue).IsNil() {
+		return "<nil>"
+	}
+	return p.value().String(s)
+}
+func (p pointerValue) Render(wr io.Writer, s Stack) { renderValue(p, wr, s) }
 
 // A Variable is an index into a Template's runtime Stack.
 type Variable int
 
-func (v Variable) Value(s Stack) Value { return s[v] }
+func (v Variable) Bool(s Stack) bool {
+	if val := s[v]; val != nil {
+		return val.Bool(s)
+	}
+	return false
+}
+
+func (v Variable) Int(s Stack) int64 {
+	if val := s[v]; val != nil {
+		return val.Int(s)
+	}
+	return 0
+}
+
+func (v Variable) String(s Stack) string {
+	if val := s[v]; val != nil {
+		return val.String(s)
+	}
+	return ""
+}
+
+func (v Variable) Uint(s Stack) uint64 {
+	if val := s[v]; val != nil {
+		return val.Uint(s)
+	}
+	return 0
+}
+
+func (v Variable) Reflect(s Stack) reflect.Value {
+	if val := s[v]; val != nil {
+		return val.Reflect(s)
+	}
+	return reflect.NewValue(nil)
+}
+
+func (v Variable) Render(wr io.Writer, s Stack) { renderValue(v, wr, s) }
 
 func (v Variable) Set(val Value, s Stack) { s[v] = val }
-
-func (v Variable) Render(wr io.Writer, s Stack) { renderValuer(v, wr, s) }
 
 func getVal(ref reflect.Value, specs []string) Value {
 	for _, s := range specs {
 		ref = lookup(ref, s)
 		if ref.Kind() == reflect.Invalid {
-			return nil
+			return nilValue(0)
 		}
 	}
 	return refToVal(ref)
 }
 
 func refToVal(ref reflect.Value) Value {
-	k := ref.Kind()
-	if reflect.Bool <= k && k <= reflect.Complex128 || k == reflect.String {
-		return ref.Interface()
+	switch ref.Kind() {
+	case reflect.Bool:
+		return boolValue(ref.Bool())
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return intValue(ref.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32,
+		reflect.Uint64, reflect.Uintptr:
+		return intValue(ref.Uint())
+	case reflect.Float32, reflect.Float64:
+		return floatValue(ref.Float())
+	// TODO: uncomment this when issue 1716 is fixed
+	//case reflect.Complex64, reflect.Complex128:
+		//return complexValue(ref.Complex())
+	case reflect.Array, reflect.Slice:
+		return arrayValue{reflectValue(ref)}
+	case reflect.Chan:
+		return chanValue{reflectValue(ref)}
+	case reflect.Map:
+		return mapValue{reflectValue(ref)}
+	case reflect.Ptr:
+		return pointerValue{reflectValue(ref)}
+	case reflect.String:
+		return stringValue(ref.String())
+	case reflect.Struct:
+		return structValue{reflectValue(ref)}
 	}
-	return ref
-
+	return nilValue(0)
 }
 
 func listElem(v reflect.Value, s string) reflect.Value {

@@ -105,7 +105,7 @@ type Node interface {
 	// wr.
 	// Render should be reentrant. If the Node needs to store state, it should
 	// allocate a Variable on the stack during parsing and use that Variable.
-	// The parameter s should only be used when calling a Valuer's Value method.
+	// The parameter s should only be used when calling a Value's Value method.
 	// Nodes should not access s directly.
 	Render(wr io.Writer, s Stack)
 }
@@ -135,7 +135,7 @@ type Template struct {
 // - If a is a map[numeric]T, slice, array, or pointer to an array, this is treated as a[b]
 // - If the above all fail, this is treated as a method call a.b()
 type expr struct {
-	v       Valuer
+	v       Value
 	attrs   []string
 	filters []*filter
 }
@@ -148,37 +148,36 @@ type expr struct {
 // - An empty string
 // - Zero of any numeric type
 func (e *expr) eval(s Stack) bool {
-	v := e.Value(s)
-	return valueAsBool(v)
+	return e.Bool(s)
 }
 
-func (e *expr) Value(s Stack) Value {
-	val := e.v.Value(s)
+func (e *expr) value(s Stack) Value {
+	val := e.v.Reflect(s)
 
 	// apply attributes
 	var ret Value
-	switch val := val.(type) {
-	case bool, float32, float64, complex64, complex128, int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64, uintptr, nil:
-		ret = val
-	case string:
+	k := val.Kind()
+	if reflect.Bool <= k && k <= reflect.Complex128 {
+		ret = e.v
+	} else if k == reflect.String {
 		if len(e.attrs) > 0 {
+			str := e.v.String(s)
 			idx, err := strconv.Atoi(e.attrs[0])
 			if err != nil {
 				return nil
 			}
 			var n, i, c int
-			for i, c = range val {
+			for i, c = range str {
 				if n == idx {
 					break
 				}
 				n++
 			}
-			ret = val[i : i+utf8.RuneLen(c)]
-			break
+			ret = stringValue(str[i : i+utf8.RuneLen(c)])
+		} else {
+			ret = e.v
 		}
-		ret = val
-	case reflect.Value:
+	} else {
 		ret = getVal(val, e.attrs)
 	}
 
@@ -189,20 +188,20 @@ func (e *expr) Value(s Stack) Value {
 	return ret
 }
 
-func (e *expr) Render(wr io.Writer, s Stack) { renderValuer(e, wr, s) }
+func (e *expr) Bool(s Stack) bool { return e.value(s).Bool(s) }
+func (e *expr) Int(s Stack) int64 { return e.value(s).Int(s) }
+func (e *expr) String(s Stack) string { return e.value(s).String(s) }
+func (e *expr) Uint(s Stack) uint64 { return e.value(s).Uint(s) }
+func (e *expr) Reflect(s Stack) reflect.Value { return e.value(s).Reflect(s) }
+
+func (e *expr) Render(wr io.Writer, s Stack) { renderValue(e, wr, s) }
 
 func (t *Template) Execute(wr io.Writer, c Context) {
 	s := make(Stack, t.scope.maxLen)
 	if c != nil {
 		for k, v := range t.scope.top() {
 			if val, ok := c[k]; ok {
-				switch val.(type) {
-				case bool, float32, float64, complex64, complex128, int, int8, int16,
-					int32, int64, uint, uint8, uint16, uint32, uint64, uintptr, string, nil:
-				default:
-					val = reflect.NewValue(val)
-				}
-				s[v] = val
+				s[v] = refToVal(reflect.NewValue(val))
 			}
 		}
 	}

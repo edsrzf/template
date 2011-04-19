@@ -6,6 +6,7 @@ import (
 
 var filterTests = []templateTest{
 	// Test add
+	templateTest{"{{ 14|add:1 }}", Context{"var": 14}, "15"},
 	templateTest{"{{ var|add:1 }}", Context{"var": 14}, "15"},
 	templateTest{"{{ var|add:-1 }}", Context{"var": 14}, "13"},
 	templateTest{"{{ var|add:\"1\" }}", Context{"var": 14}, "15"},
