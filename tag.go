@@ -8,13 +8,13 @@ import (
 type TagFunc func(p *parser) Node
 
 var tags = map[string]TagFunc{
-	"cycle":   parseCycle,
-	"firstof": parseFirstof,
-	"for":     parseFor,
-	"if":      parseIf,
-	"ifchanged":      parseIfChanged,
-	"set":     parseSet,
-	"with":    parseWith,
+	"cycle":     parseCycle,
+	"firstof":   parseFirstof,
+	"for":       parseFor,
+	"if":        parseIf,
+	"ifchanged": parseIfChanged,
+	"set":       parseSet,
+	"with":      parseWith,
 }
 
 type cycleTag struct {
