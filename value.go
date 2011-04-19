@@ -20,6 +20,12 @@ func quoteString(v Value, s Stack) string {
 // A Value represents a generic value of any type.
 type Value interface {
 	Node
+	// TODO: the Eval documentation really sucks
+
+	// Eval evaluates the Value, performing any necessary operations to get the
+	// final Value on which Value's other methods operate.
+	// This method should be used to avoid unnecessary multiple evaluations of the Value.
+	Eval(s Stack) Value
 	// Bool coerces the Value to a boolean. Values that are true are:
 	//	- A bool that is true
 	//	- A non-zero integer
@@ -54,6 +60,7 @@ type Value interface {
 
 type nilValue byte
 
+func (n nilValue) Eval(s Stack) Value           { return n }
 func (n nilValue) Bool(s Stack) bool             { return false }
 func (n nilValue) Int(s Stack) int64             { return 0 }
 func (n nilValue) String(s Stack) string         { return "" }
@@ -63,6 +70,7 @@ func (n nilValue) Render(wr io.Writer, s Stack)  {}
 
 type boolValue bool
 
+func (b boolValue) Eval(s Stack) Value { return b }
 func (b boolValue) Bool(s Stack) bool { return bool(b) }
 func (b boolValue) Int(s Stack) int64 {
 	if b {
@@ -92,6 +100,7 @@ func renderValue(v Value, wr io.Writer, s Stack) {
 
 type stringValue string
 
+func (str stringValue) Eval(s Stack) Value { return str }
 func (str stringValue) Bool(s Stack) bool { return str != "" }
 
 func (str stringValue) Int(s Stack) int64 {
@@ -121,6 +130,7 @@ func (i intValue) Int(s Stack) int64             { return int64(i) }
 func (i intValue) String(s Stack) string         { return strconv.Itoa64(int64(i)) }
 func (i intValue) Uint(s Stack) uint64           { return uint64(i) }
 func (i intValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(i) }
+func (i intValue) Eval(s Stack) Value { return i }
 
 func (i intValue) Render(wr io.Writer, s Stack) {
 	wr.Write([]byte(i.String(s)))
@@ -133,6 +143,7 @@ func (f floatValue) Int(s Stack) int64             { return int64(f) }
 func (f floatValue) String(s Stack) string         { return strconv.Ftoa64(float64(f), 'g', -1) }
 func (f floatValue) Uint(s Stack) uint64           { return uint64(f) }
 func (f floatValue) Reflect(s Stack) reflect.Value { return reflect.NewValue(f) }
+func (f floatValue) Eval(s Stack) Value { return f }
 
 func (f floatValue) Render(wr io.Writer, s Stack) {
 	wr.Write([]byte(f.String(s)))
@@ -180,6 +191,7 @@ func (a arrayValue) String(s Stack) string {
 	str += "]"
 	return str
 }
+func (a arrayValue) Eval(s Stack) Value { return a }
 func (a arrayValue) Render(wr io.Writer, s Stack) { renderValue(a, wr, s) }
 
 type mapValue struct {
@@ -205,6 +217,7 @@ func (m mapValue) String(s Stack) string {
 	str += "}"
 	return str
 }
+func (m mapValue) Eval(s Stack) Value { return m }
 func (m mapValue) Render(wr io.Writer, s Stack) { renderValue(m, wr, s) }
 
 type chanValue struct {
@@ -215,6 +228,7 @@ func (c chanValue) String(s Stack) string {
 	// TODO: implement
 	return ""
 }
+func (c chanValue) Eval(s Stack) Value { return c }
 func (c chanValue) Render(wr io.Writer, s Stack) { renderValue(c, wr, s) }
 
 type structValue struct {
@@ -226,6 +240,7 @@ func (st structValue) String(s Stack) string {
 	// TODO: implement
 	return ""
 }
+func (st structValue) Eval(s Stack) Value { return st }
 func (st structValue) Render(wr io.Writer, s Stack) { renderValue(st, wr, s) }
 
 type pointerValue struct {
@@ -241,6 +256,7 @@ func (p pointerValue) String(s Stack) string {
 	}
 	return p.value().String(s)
 }
+func (p pointerValue) Eval(s Stack) Value { return p }
 func (p pointerValue) Render(wr io.Writer, s Stack) { renderValue(p, wr, s) }
 
 // A Variable is an index into a Template's runtime Stack.
@@ -281,6 +297,7 @@ func (v Variable) Reflect(s Stack) reflect.Value {
 	return reflect.NewValue(nil)
 }
 
+func (v Variable) Eval(s Stack) Value { return s[v] }
 func (v Variable) Render(wr io.Writer, s Stack) { renderValue(v, wr, s) }
 
 func (v Variable) Set(val Value, s Stack) { s[v] = val }

@@ -34,6 +34,7 @@ var tagTests = []templateTest{
 	// set
 	templateTest{"{% set var1 1 %}{% set var2 'hi' %}{% set var3 3.14 %}{{ var1 }} {{ var2 }} {{ var3 }}", nil, "1 hi 3.14"},
 	templateTest{"{% set setvar var %}{{ setvar }}", Context{"var": "test"}, "test"},
+	templateTest{"{% set var2 var1 %}{% set var1 2 %}{{ var1 }} {{ var2 }}", Context{"var1": 1}, "2 1"},
 
 	// with
 	templateTest{"{% with %}{% set var 1 %}{{ var }}{% endwith %} {{ var }}", nil, "1 "},

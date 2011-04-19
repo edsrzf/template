@@ -38,10 +38,6 @@ func (i *ifTag) Render(wr io.Writer, s Stack) {
 	}
 }
 
-type condition interface {
-	eval(s Stack) bool
-}
-
 func parseCondition(p *parser) Value {
 	return p.parseExpr()
 }
@@ -69,25 +65,25 @@ func (n *nequal) eval(s Stack) bool {
 }
 
 type not struct {
-	inner condition
+	x Value
 }
 
 func (n *not) eval(s Stack) bool {
-	return !n.inner.eval(s)
+	return !n.x.Bool(s)
 }
 
 type and struct {
-	left, right condition
+	left, right Value
 }
 
 func (a *and) eval(s Stack) bool {
-	return a.left.eval(s) && a.right.eval(s)
+	return a.left.Bool(s) && a.right.Bool(s)
 }
 
 type or struct {
-	left, right condition
+	left, right Value
 }
 
 func (o *or) eval(s Stack) bool {
-	return o.left.eval(s) || o.right.eval(s)
+	return o.left.Bool(s) || o.right.Bool(s)
 }

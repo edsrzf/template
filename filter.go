@@ -155,6 +155,7 @@ func filesizeformatFilter(in Value, s Stack, arg Value) Value {
 
 // Works on slices or arrays
 func firstFilter(in Value, s Stack, arg Value) Value {
+	in = in.Eval(s)
 	v := in.Reflect(s)
 	switch v.Kind() {
 	case reflect.String:
@@ -227,7 +228,8 @@ func lengthFilter(in Value, s Stack, arg Value) Value {
 }
 
 func lengthIsFilter(in Value, s Stack, arg Value) Value {
-	l := lengthFilter(in, s, arg).Int(s)
+	in = in.Eval(s)
+	l := lengthFilter(in, s, nilValue(0)).Int(s)
 	return boolValue(l == arg.Int(s))
 }
 

@@ -155,9 +155,7 @@ func parseSet(p *parser) Node {
 }
 
 func (t *setTag) Render(wr io.Writer, s Stack) {
-	// TODO: probably should have a Value method on the Value interface that returns
-	// a copy in the case of Variables and exprs
-	t.v.Set(t.e, s)
+	t.v.Set(t.e.Eval(s), s)
 }
 
 type with NodeList

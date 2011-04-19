@@ -147,11 +147,7 @@ type expr struct {
 // - The bool Value false
 // - An empty string
 // - Zero of any numeric type
-func (e *expr) eval(s Stack) bool {
-	return e.Bool(s)
-}
-
-func (e *expr) value(s Stack) Value {
+func (e *expr) Eval(s Stack) Value {
 	val := e.v.Reflect(s)
 
 	// apply attributes
@@ -188,11 +184,11 @@ func (e *expr) value(s Stack) Value {
 	return ret
 }
 
-func (e *expr) Bool(s Stack) bool             { return e.value(s).Bool(s) }
-func (e *expr) Int(s Stack) int64             { return e.value(s).Int(s) }
-func (e *expr) String(s Stack) string         { return e.value(s).String(s) }
-func (e *expr) Uint(s Stack) uint64           { return e.value(s).Uint(s) }
-func (e *expr) Reflect(s Stack) reflect.Value { return e.value(s).Reflect(s) }
+func (e *expr) Bool(s Stack) bool             { return e.Eval(s).Bool(s) }
+func (e *expr) Int(s Stack) int64             { return e.Eval(s).Int(s) }
+func (e *expr) String(s Stack) string         { return e.Eval(s).String(s) }
+func (e *expr) Uint(s Stack) uint64           { return e.Eval(s).Uint(s) }
+func (e *expr) Reflect(s Stack) reflect.Value { return e.Eval(s).Reflect(s) }
 
 func (e *expr) Render(wr io.Writer, s Stack) { renderValue(e, wr, s) }
 
