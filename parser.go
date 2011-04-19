@@ -67,7 +67,9 @@ func (p *parser) ParseUntil(tags ...string) (string, NodeList) {
 
 func (p *parser) parseBlockTag() Node {
 	if tag, ok := tags[p.Expect(tokIdent)]; ok {
-		return tag(p)
+		node := tag(p)
+		p.Expect(tokBlockTagEnd)
+		return node
 	}
 	p.Error("tag isn't registered")
 	return nil

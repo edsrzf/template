@@ -27,7 +27,6 @@ func parseIf(p *parser) Node {
 			p.Error("unterminated if tag")
 		}
 	}
-	p.Expect(tokBlockTagEnd)
 	return tag
 }
 

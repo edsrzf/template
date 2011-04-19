@@ -23,7 +23,6 @@ func parseFirstof(p *parser) Node {
 		v := p.parseExpr()
 		f = append(f, v)
 	}
-	p.Expect(tokBlockTagEnd)
 	return f
 }
 
@@ -67,7 +66,6 @@ func parseFor(p *parser) Node {
 	if tok != "endfor" {
 		p.Error("unterminated for tag")
 	}
-	p.Expect(tokBlockTagEnd)
 	return &forTag{v, collection, r, elseNode}
 }
 
@@ -129,7 +127,6 @@ func parseSet(p *parser) Node {
 	name := p.Expect(tokIdent)
 	v := p.s.Insert(name)
 	e := p.parseExpr()
-	p.Expect(tokBlockTagEnd)
 	return &setTag{v, e}
 }
 
@@ -147,7 +144,6 @@ func parseWith(p *parser) Node {
 	if tok != "endwith" {
 		p.Error("unterminated with tag")
 	}
-	p.Expect(tokBlockTagEnd)
 	return with(nodes)
 }
 

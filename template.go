@@ -61,7 +61,6 @@ func (s *scope) Lookup(name string) variable {
 		}
 	}
 	v := variable(s.maxLen)
-	//println("inserting", name, "at level 0 as", v)
 	s.levels[0][name] = v
 	s.maxLen++
 	return v
@@ -78,7 +77,6 @@ func (s *scope) Insert(name string) variable {
 		return v
 	}
 	v = variable(s.len())
-	//println("inserting", name, "at level", l-1, "as", v)
 	s.levels[l-1][name] = v
 	s.maxLen++
 	return v
