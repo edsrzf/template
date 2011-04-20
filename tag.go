@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-type TagFunc func(p *parser) Node
+type TagFunc func(p *Parser) Node
 
 var tags = map[string]TagFunc{
 	"cycle":     parseCycle,
@@ -22,10 +22,10 @@ type cycleTag struct {
 	state Variable
 }
 
-func parseCycle(p *parser) Node {
+func parseCycle(p *Parser) Node {
 	args := make([]Node, 0, 2)
-	for p.tok != tokBlockTagEnd {
-		v := p.parseExpr()
+	for p.Current() != TokTagEnd {
+		v := p.ParseExpr()
 		args = append(args, v)
 	}
 	if len(args) < 1 {
@@ -47,10 +47,10 @@ func (c cycleTag) Render(wr io.Writer, s Stack) {
 
 type firstofTag []Value
 
-func parseFirstof(p *parser) Node {
+func parseFirstof(p *Parser) Node {
 	tag := make(firstofTag, 0, 2)
-	for p.tok != tokBlockTagEnd {
-		v := p.parseExpr()
+	for p.Current() != TokTagEnd {
+		v := p.ParseExpr()
 		tag = append(tag, v)
 	}
 	return tag
@@ -73,21 +73,21 @@ type forTag struct {
 	elseNode   Node
 }
 
-func parseFor(p *parser) Node {
+func parseFor(p *Parser) Node {
 	p.s.Push()
-	name := p.Expect(tokIdent)
+	name := p.Expect(TokIdent)
 	v := p.s.Insert(name)
 	p.ExpectWord("in")
-	collection := p.parseExpr()
+	collection := p.ParseExpr()
 	switch collection.(type) {
 	case intValue, floatValue:
 		p.Error("numeric literals are not iterable")
 	}
-	p.Expect(tokBlockTagEnd)
+	p.Expect(TokTagEnd)
 	tok, body := p.ParseUntil("else", "endfor")
 	var elseNode Node
 	if tok == "else" {
-		p.Expect(tokBlockTagEnd)
+		p.Expect(TokTagEnd)
 		tok, elseNode = p.ParseUntil("endfor")
 	}
 	if tok != "endfor" {
@@ -151,13 +151,13 @@ type ifChangedTag struct {
 	elseNodes NodeList
 }
 
-func parseIfChanged(p *parser) Node {
+func parseIfChanged(p *Parser) Node {
 	args := make([]Value, 0, 2)
-	for p.tok != tokBlockTagEnd {
-		v := p.parseExpr()
+	for p.Current() != TokTagEnd {
+		v := p.ParseExpr()
 		args = append(args, v)
 	}
-	p.Expect(tokBlockTagEnd)
+	p.Expect(TokTagEnd)
 	vars := make([]Variable, len(args))
 	for i := range vars {
 		// use a value that can never otherwise occur so we always detect a
@@ -167,7 +167,7 @@ func parseIfChanged(p *parser) Node {
 	tok, ifNodes := p.ParseUntil("else", "endifchanged")
 	var elseNodes NodeList
 	if tok == "else" {
-		p.Expect(tokBlockTagEnd)
+		p.Expect(TokTagEnd)
 		tok, elseNodes = p.ParseUntil("endifchanged")
 	}
 	if tok != "endifchanged" {
@@ -198,10 +198,10 @@ type setTag struct {
 	e Value
 }
 
-func parseSet(p *parser) Node {
-	name := p.Expect(tokIdent)
+func parseSet(p *Parser) Node {
+	name := p.Expect(TokIdent)
 	v := p.s.Insert(name)
-	e := p.parseExpr()
+	e := p.ParseExpr()
 	return &setTag{v, e}
 }
 
@@ -211,9 +211,9 @@ func (t *setTag) Render(wr io.Writer, s Stack) {
 
 type with NodeList
 
-func parseWith(p *parser) Node {
+func parseWith(p *Parser) Node {
 	p.s.Push()
-	p.Expect(tokBlockTagEnd)
+	p.Expect(TokTagEnd)
 	tok, nodes := p.ParseUntil("endwith")
 	if tok != "endwith" {
 		p.Error("unterminated with tag")

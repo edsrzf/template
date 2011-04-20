@@ -6,44 +6,48 @@ import (
 	"utf8"
 )
 
-type token int
+type Token int
 
 const (
-	tokIllegal token = iota
-	tokEof
+	TokIllegal Token = iota
+	TokEof
 
-	tokIdent  // for
-	tokInt    // 12345
-	tokFloat  // 123.45e2
-	tokString // 'abc' or "abc"
+	TokIdent  // for
+	TokInt    // 12345
+	TokFloat  // 123.45e2
+	TokString // 'abc' or "abc"
 
-	tokText // text not inside a tag
+	TokText // text not inside a tag
 
-	tokBlockTagStart // {%
-	tokBlockTagEnd   // %}
-	tokVarTagStart   // {{
-	tokVarTagEnd     // }}
+	TokTagStart // {%
+	TokTagEnd   // %}
+	TokVarStart // {{
+	TokVarEnd   // }}
 
-	tokDot      // .
-	tokFilter   // |
-	tokArgument // :
+	TokDot      // .
+	TokFilter   // |
+	TokArgument // :
 )
 
-var tokStrings = map[token]string{
-	tokIllegal:       "illegal",
-	tokEof:           "eof",
-	tokIdent:         "ident",
-	tokInt:           "int",
-	tokFloat:         "float",
-	tokString:        "string",
-	tokText:          "text",
-	tokBlockTagStart: "{%",
-	tokBlockTagEnd:   "%}",
-	tokVarTagStart:   "{{",
-	tokVarTagEnd:     "}}",
-	tokDot:           ".",
-	tokFilter:        "|",
-	tokArgument:      ":",
+var tokStrings = map[Token]string{
+	TokIllegal:  "illegal",
+	TokEof:      "eof",
+	TokIdent:    "ident",
+	TokInt:      "int",
+	TokFloat:    "float",
+	TokString:   "string",
+	TokText:     "text",
+	TokTagStart: "{%",
+	TokTagEnd:   "%}",
+	TokVarStart: "{{",
+	TokVarEnd:   "}}",
+	TokDot:      ".",
+	TokFilter:   "|",
+	TokArgument: ":",
+}
+
+func (t Token) String() string {
+	return tokStrings[t]
 }
 
 type lexer struct {
@@ -73,17 +77,17 @@ func (l *lexer) next() {
 	}
 }
 
-func (l *lexer) scan() (token, []byte) {
+func (l *lexer) scan() (Token, []byte) {
 scanAgain:
 	if !l.insideTag && l.ch != '{' {
 		lit := l.scanText()
-		return tokText, lit
+		return TokText, lit
 	}
 	l.insideTag = true
 	l.consumeWhitespace()
 
 	pos := l.offset
-	tok := tokIllegal
+	tok := TokIllegal
 
 	switch ch := l.ch; {
 	case unicode.IsLetter(ch), l.ch == '_':
@@ -93,25 +97,25 @@ scanAgain:
 	case ch == '-', ch == '+':
 		tok = l.scanNumber()
 	case ch == '|':
-		tok = tokFilter
+		tok = TokFilter
 		l.next()
 	case ch == '.':
-		tok = tokDot
+		tok = TokDot
 		l.next()
 	case ch == ':':
-		tok = tokArgument
+		tok = TokArgument
 		l.next()
 	default:
 		l.next()
 		switch ch {
 		case -1:
-			tok = tokEof
+			tok = TokEof
 		case '{':
 			switch l.ch {
 			case '%':
-				tok = tokBlockTagStart
+				tok = TokTagStart
 			case '{':
-				tok = tokVarTagStart
+				tok = TokVarStart
 			case '#':
 				// start of a comment; scan until the end
 				l.next()
@@ -133,13 +137,13 @@ scanAgain:
 				goto illegal
 			}
 			l.insideTag = false
-			tok = tokBlockTagEnd
+			tok = TokTagEnd
 		case '}':
 			if l.ch != '}' {
 				goto illegal
 			}
 			l.insideTag = false
-			tok = tokVarTagEnd
+			tok = TokVarEnd
 		case '\'', '"':
 			tok = l.scanString(byte(ch))
 			return tok, l.src[pos+1 : l.offset-1]
@@ -194,15 +198,15 @@ consume:
 	return lit
 }
 
-func (l *lexer) scanIdent() token {
+func (l *lexer) scanIdent() Token {
 	for unicode.IsLetter(l.ch) || unicode.IsDigit(l.ch) || l.ch == '_' {
 		l.next()
 	}
-	return tokIdent
+	return TokIdent
 }
 
-func (l *lexer) scanNumber() token {
-	tok := tokInt
+func (l *lexer) scanNumber() Token {
+	tok := TokInt
 	seenDecimal := false
 	seenExponent := false
 
@@ -214,18 +218,18 @@ func (l *lexer) scanNumber() token {
 		!seenExponent && (l.ch == 'e' || l.ch == 'E') {
 		if l.ch == '.' {
 			seenDecimal = true
-			tok = tokFloat
+			tok = TokFloat
 		}
 		if l.ch == 'e' || l.ch == 'E' {
 			seenExponent = true
-			tok = tokFloat
+			tok = TokFloat
 		}
 		l.next()
 	}
 	return tok
 }
 
-func (l *lexer) scanString(start byte) token {
+func (l *lexer) scanString(start byte) Token {
 	// ' or " already consumed
 	pos := bytes.IndexByte(l.src[l.offset:], start)
 	if pos < 0 {
@@ -234,5 +238,5 @@ func (l *lexer) scanString(start byte) token {
 	l.offset += pos
 	l.width = 1
 	l.next()
-	return tokString
+	return TokString
 }

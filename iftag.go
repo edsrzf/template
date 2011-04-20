@@ -10,10 +10,10 @@ type ifTag struct {
 	elseNode Node
 }
 
-func parseIf(p *parser) Node {
+func parseIf(p *Parser) Node {
 	tag := new(ifTag)
 	tag.cond = parseCondition(p)
-	p.Expect(tokBlockTagEnd)
+	p.Expect(TokTagEnd)
 	var tok string
 	tok, tag.ifNode = p.ParseUntil("elif", "else", "endif")
 	for tok != "endif" {
@@ -38,8 +38,8 @@ func (i *ifTag) Render(wr io.Writer, s Stack) {
 	}
 }
 
-func parseCondition(p *parser) Value {
-	return p.parseExpr()
+func parseCondition(p *Parser) Value {
+	return p.ParseExpr()
 }
 
 type equal struct {

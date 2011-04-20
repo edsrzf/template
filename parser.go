@@ -7,82 +7,86 @@ import (
 	"strconv"
 )
 
-type parser struct {
+type Parser struct {
 	l   *lexer
-	tok token
+	tok Token
 	lit []byte
 	s   *scope
 }
 
-func (p *parser) Error(format string, args ...interface{}) {
+func (p *Parser) Error(format string, args ...interface{}) {
 	panic(fmt.Sprintf(format, args...))
 }
 
-func (p *parser) next() {
+func (p *Parser) Current() Token {
+	return p.tok
+}
+
+func (p *Parser) Next() {
 	p.tok, p.lit = p.l.scan()
 }
 
-func (p *parser) Expect(tok token) string {
+func (p *Parser) Expect(tok Token) string {
 	if p.tok != tok {
-		p.Error("expected %s, got %s", tokStrings[tok], tokStrings[p.tok])
+		p.Error("expected %s, got %s", tok, p.tok)
 	}
 	lit := p.lit
-	p.next()
+	p.Next()
 	return string(lit)
 }
 
-func (p *parser) ExpectWord(word string) {
-	if p.tok != tokIdent || string(p.lit) != word {
-		p.Error("expected ident %s, got token %s, %s", word, tokStrings[p.tok], p.lit)
+func (p *Parser) ExpectWord(word string) {
+	if p.tok != TokIdent || string(p.lit) != word {
+		p.Error("expected ident %s, got Token %s, %s", word, p.tok, p.lit)
 	}
-	p.next()
+	p.Next()
 }
 
 // parse until one of the following tags
-func (p *parser) ParseUntil(tags ...string) (string, NodeList) {
+func (p *Parser) ParseUntil(tags ...string) (string, NodeList) {
 	r := make(NodeList, 0, 10)
-	for p.tok != tokEof {
+	for p.tok != TokEof {
 		switch p.tok {
-		case tokText:
+		case TokText:
 			r = append(r, printLit(p.lit))
-			p.next()
-		case tokBlockTagStart:
-			p.next()
+			p.Next()
+		case TokTagStart:
+			p.Next()
 			lit := string(p.lit)
 			for _, t := range tags {
 				if t == lit {
-					p.next()
+					p.Next()
 					return t, r
 				}
 			}
 			r = append(r, p.parseBlockTag())
-		case tokVarTagStart:
+		case TokVarStart:
 			r = append(r, p.parseVarTag())
 		default:
-			p.Error("unexpected token %s", tokStrings[p.tok])
+			p.Error("unexpected Token %s", p.tok)
 		}
 	}
 	return "", r
 }
 
-func (p *parser) parseBlockTag() Node {
-	if tag, ok := tags[p.Expect(tokIdent)]; ok {
+func (p *Parser) parseBlockTag() Node {
+	if tag, ok := tags[p.Expect(TokIdent)]; ok {
 		node := tag(p)
-		p.Expect(tokBlockTagEnd)
+		p.Expect(TokTagEnd)
 		return node
 	}
 	p.Error("tag isn't registered")
 	return nil
 }
 
-func (p *parser) parseVarTag() Node {
-	p.Expect(tokVarTagStart)
-	e := p.parseExpr()
-	p.Expect(tokVarTagEnd)
+func (p *Parser) parseVarTag() Node {
+	p.Expect(TokVarStart)
+	e := p.ParseExpr()
+	p.Expect(TokVarEnd)
 	return e
 }
 
-func (p *parser) parseExpr() Value {
+func (p *Parser) ParseExpr() Value {
 	v := p.parseVal()
 	a := p.parseAttrs()
 	f := p.parseFilters()
@@ -92,76 +96,76 @@ func (p *parser) parseExpr() Value {
 	return &expr{v, a, f}
 }
 
-func (p *parser) parseVal() Value {
+func (p *Parser) parseVal() Value {
 	var ret Value
 	switch p.tok {
-	case tokInt:
+	case TokInt:
 		i, err := strconv.Atoi64(string(p.lit))
 		if err != nil {
 			p.Error("internal int error: %s", err)
 		}
 		ret = intValue(i)
-		p.next()
-	case tokFloat:
+		p.Next()
+	case TokFloat:
 		f, err := strconv.Atof64(string(p.lit))
 		if err != nil {
 			p.Error("Internal float error: %s", err)
 		}
 		ret = floatValue(f)
-		p.next()
-	case tokString:
+		p.Next()
+	case TokString:
 		ret = stringValue(p.lit)
-		p.next()
-	case tokIdent:
+		p.Next()
+	case TokIdent:
 		ret = p.parseVar()
 	default:
-		p.Error("Unexpected token %s", tokStrings[p.tok])
+		p.Error("Unexpected Token %s", p.tok)
 	}
 	return ret
 }
 
-func (p *parser) parseVar() Variable {
-	return p.s.Lookup(p.Expect(tokIdent))
+func (p *Parser) parseVar() Variable {
+	return p.s.Lookup(p.Expect(TokIdent))
 }
 
-func (p *parser) parseAttrs() []string {
+func (p *Parser) parseAttrs() []string {
 	var attrs []string
-	for p.tok == tokDot {
-		p.Expect(tokDot)
+	for p.tok == TokDot {
+		p.Expect(TokDot)
 		attrs = append(attrs, string(p.lit))
-		if p.tok == tokInt {
-			p.next()
+		if p.tok == TokInt {
+			p.Next()
 		} else {
-			p.Expect(tokIdent)
+			p.Expect(TokIdent)
 		}
 	}
 	return attrs
 }
 
-func (p *parser) parseFilters() []*filter {
+func (p *Parser) parseFilters() []*filter {
 	var f []*filter
-	for p.tok == tokFilter {
-		p.next()
+	for p.tok == TokFilter {
+		p.Next()
 		rf, ok := filters[string(p.lit)]
 		if !ok {
 			p.Error("filter does not exist")
 		}
-		p.Expect(tokIdent)
+		p.Expect(TokIdent)
 		var val Value
 		args := false
 		switch rf.arg {
 		case ReqArg:
 			args = true
 		case OptArg:
-			args = p.tok == tokArgument
+			args = p.tok == TokArgument
 		case NoArg:
-			if p.tok == tokArgument {
+			if p.tok == TokArgument {
 				p.Error("filter accepts no arguments")
 			}
 		}
 		if args {
-			p.Expect(tokArgument)
-			val = p.parseExpr()
+			p.Expect(TokArgument)
+			val = p.ParseExpr()
 		}
 		f = append(f, &filter{rf.f, val})
 	}
@@ -172,9 +176,9 @@ func Parse(s []byte) (*Template, os.Error) {
 	t := new(Template)
 	l := &lexer{src: s}
 	l.init()
-	p := &parser{l: l, s: newScope()}
+	p := &Parser{l: l, s: newScope()}
 
-	p.next()
+	p.Next()
 	_, t.nodes = p.ParseUntil()
 	t.scope = p.s
 
