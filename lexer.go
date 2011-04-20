@@ -74,6 +74,7 @@ func (l *lexer) next() {
 }
 
 func (l *lexer) scan() (token, []byte) {
+scanAgain:
 	if !l.insideTag && l.ch != '{' {
 		lit := l.scanText()
 		return tokText, lit
@@ -124,7 +125,7 @@ func (l *lexer) scan() (token, []byte) {
 						break
 					}
 				}
-				// TODO: probably shouldn't recurse
+				goto scanAgain
 				return l.scan()
 			}
 		case '%':
