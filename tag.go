@@ -18,12 +18,12 @@ var tags = map[string]TagFunc{
 }
 
 type cycleTag struct {
-	args  []Node
+	args  []Expr
 	state Variable
 }
 
 func parseCycle(p *Parser) Node {
-	args := make([]Node, 0, 2)
+	args := make([]Expr, 0, 2)
 	for p.Current() != TokTagEnd {
 		v := p.ParseExpr()
 		args = append(args, v)
@@ -36,8 +36,8 @@ func parseCycle(p *Parser) Node {
 }
 
 func (t cycleTag) Render(wr io.Writer, c *Context) {
-	i := t.state.Int(c)
-	t.args[i].Render(wr, c)
+	i := t.state.Eval(c).Int()
+	t.args[i].Eval(c).Render(wr, c)
 	i++
 	if int(i) >= len(t.args) {
 		i = 0
@@ -45,7 +45,7 @@ func (t cycleTag) Render(wr io.Writer, c *Context) {
 	t.state.Set(intValue(i), c)
 }
 
-type firstofTag []Value
+type firstofTag []Expr
 
 func parseFirstof(p *Parser) Node {
 	tag := make(firstofTag, 0, 2)
@@ -57,8 +57,8 @@ func parseFirstof(p *Parser) Node {
 }
 
 func (f firstofTag) Render(wr io.Writer, c *Context) {
-	for _, val := range f {
-		if val.Bool(c) {
+	for _, expr := range f {
+		if val := expr.Eval(c); val.Bool() {
 			val.Render(wr, c)
 			return
 		}
@@ -67,7 +67,7 @@ func (f firstofTag) Render(wr io.Writer, c *Context) {
 
 type forTag struct {
 	v          Variable
-	collection Value
+	collection Expr
 	init       Node
 	body       Node
 	elseNode   Node
@@ -79,10 +79,6 @@ func parseFor(p *Parser) Node {
 	v := p.s.Insert(name)
 	p.ExpectWord("in")
 	collection := p.ParseExpr()
-	switch collection.(type) {
-	case intValue, floatValue:
-		p.Error("numeric literals are not iterable")
-	}
 	p.Expect(TokTagEnd)
 	tok, body := p.ParseUntil("else", "endfor")
 	var elseNode Node
@@ -99,12 +95,13 @@ func parseFor(p *Parser) Node {
 // TODO: this needs reworking. We need a good way to set Variables on the stack.
 func (f *forTag) Render(wr io.Writer, c *Context) {
 	f.init.Render(wr, c)
-	v := f.collection.Reflect(c)
+	colVal := f.collection.Eval(c)
+	v := colVal.Reflect()
 	v = reflect.Indirect(v)
 	n := 0
 	switch v.Kind() {
 	case reflect.String:
-		v := f.collection.String(c)
+		v := colVal.String()
 		n = len(v)
 		for _, ch := range v {
 			f.v.Set(stringValue(ch), c)
@@ -145,14 +142,14 @@ func (f *forTag) Render(wr io.Writer, c *Context) {
 }
 
 type ifChangedTag struct {
-	vals      []Value
+	vals      []Expr
 	last      []Variable
 	ifNodes   NodeList
 	elseNodes NodeList
 }
 
 func parseIfChanged(p *Parser) Node {
-	args := make([]Value, 0, 2)
+	args := make([]Expr, 0, 2)
 	for p.Current() != TokTagEnd {
 		v := p.ParseExpr()
 		args = append(args, v)
@@ -195,7 +192,7 @@ func (t *ifChangedTag) Render(wr io.Writer, c *Context) {
 
 type setTag struct {
 	v Variable
-	e Value
+	e Expr
 }
 
 func parseSet(p *Parser) Node {

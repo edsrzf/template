@@ -83,38 +83,41 @@ func (p *Parser) parseVarTag() Node {
 	p.Expect(TokVarStart)
 	e := p.ParseExpr()
 	p.Expect(TokVarEnd)
+	return varTag{e}
+}
+
+func (p *Parser) ParseExpr() Expr {
+	e := p.parseVal()
+	a := p.parseAttrs()
+	if len(a) > 0 {
+		e = &attrExpr{e, a}
+	}
+	f := p.parseFilters()
+	if len(f) > 0 {
+		e = &filterExpr{e, f}
+	}
 	return e
 }
 
-func (p *Parser) ParseExpr() Value {
-	v := p.parseVal()
-	a := p.parseAttrs()
-	f := p.parseFilters()
-	if len(a) == 0 && len(f) == 0 {
-		return v
-	}
-	return &expr{v, a, f}
-}
-
-func (p *Parser) parseVal() Value {
-	var ret Value
+func (p *Parser) parseVal() Expr {
+	var ret Expr
 	switch p.tok {
 	case TokInt:
 		i, err := strconv.Atoi64(string(p.lit))
 		if err != nil {
 			p.Error("internal int error: %s", err)
 		}
-		ret = intValue(i)
+		ret = constExpr{intValue(i)}
 		p.Next()
 	case TokFloat:
 		f, err := strconv.Atof64(string(p.lit))
 		if err != nil {
 			p.Error("Internal float error: %s", err)
 		}
-		ret = floatValue(f)
+		ret = constExpr{floatValue(f)}
 		p.Next()
 	case TokString:
-		ret = stringValue(p.lit)
+		ret = constExpr{stringValue(p.lit)}
 		p.Next()
 	case TokIdent:
 		ret = p.parseVar()
@@ -151,7 +154,7 @@ func (p *Parser) parseFilters() []*filter {
 			p.Error("filter does not exist")
 		}
 		p.Expect(TokIdent)
-		var val Value
+		var val Expr
 		args := false
 		switch rf.arg {
 		case ReqArg:

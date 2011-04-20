@@ -8,11 +8,11 @@ import (
 
 // If v is a string, put it in single quotes.
 // Otherwise return the string normally.
-func quoteString(v Value, c *Context) string {
+func quoteString(v Value) string {
 	if s, ok := v.(stringValue); ok {
 		return "'" + string(s) + "'"
 	}
-	return v.String(c)
+	return v.String()
 }
 
 // TODO: should there be a Float method on Value?
@@ -20,12 +20,7 @@ func quoteString(v Value, c *Context) string {
 // A Value represents a generic value of any type.
 type Value interface {
 	Node
-	// TODO: the Eval documentation really sucks
 
-	// Eval evaluates the Value, performing any necessary operations to get the
-	// final Value on which Value's other methods operate.
-	// This method should be used to avoid unnecessary multiple evaluations of the Value.
-	Eval(c *Context) Value
 	// Bool coerces the Value to a boolean. Values that are true are:
 	//	- A bool that is true
 	//	- A non-zero integer
@@ -34,7 +29,8 @@ type Value interface {
 	//	- Any struct
 	//	- A non-nil pointer to any of the above
 	// All other values evaluate to false.
-	Bool(c *Context) bool
+	Bool() bool
+
 	// Int coerces the Value to a signed integer. The return parameter follows these
 	// rules:
 	//	- A bool that is true evaluates to 1; false evaluates to 0
@@ -42,7 +38,8 @@ type Value interface {
 	//	- A string is converted to a signed integer if possible
 	//	- A non-nil pointer to one of the above types uses 
 	// All other values evaluate to 0.
-	Int(c *Context) int64
+	Int() int64
+
 	// String coerces the Value to a string. The return parameter follows these rules:
 	//	- A bool returns "true" if it is true and "false" otherwise
 	//	- An integer is converted to its string representation
@@ -50,115 +47,107 @@ type Value interface {
 	//	- A non-nil pointer evaluates to whatever its element would evaluate to
 	//	according to these rules
 	// All other values evaluate to the empty string "".
-	String(c *Context) string
+	String() string
+
 	// Uint coerces the Value to an unsigned integer. It uses the same rules as
 	// Int except that negative signed integers will underflow to positive integers.
-	Uint(c *Context) uint64
+	Uint() uint64
+
 	// Reflect returns the Value's reflected value.
-	Reflect(c *Context) reflect.Value
+	Reflect() reflect.Value
 }
 
 type nilValue byte
 
-func (n nilValue) Eval(c *Context) Value            { return n }
-func (n nilValue) Bool(c *Context) bool             { return false }
-func (n nilValue) Int(c *Context) int64             { return 0 }
-func (n nilValue) String(c *Context) string         { return "" }
-func (n nilValue) Uint(c *Context) uint64           { return 0 }
-func (n nilValue) Reflect(c *Context) reflect.Value { return reflect.NewValue(nil) }
+func (n nilValue) Bool() bool             { return false }
+func (n nilValue) Int() int64             { return 0 }
+func (n nilValue) String() string         { return "" }
+func (n nilValue) Uint() uint64           { return 0 }
+func (n nilValue) Reflect() reflect.Value { return reflect.NewValue(nil) }
 func (n nilValue) Render(wr io.Writer, c *Context)  {}
 
 type boolValue bool
 
-func (b boolValue) Eval(c *Context) Value { return b }
-func (b boolValue) Bool(c *Context) bool  { return bool(b) }
-func (b boolValue) Int(c *Context) int64 {
+func (b boolValue) Bool() bool  { return bool(b) }
+func (b boolValue) Int() int64 {
 	if b {
 		return 1
 	}
 	return 0
 }
-func (b boolValue) String(c *Context) string {
+func (b boolValue) String() string {
 	if b {
 		return "true"
 	}
 	return "false"
 }
-func (b boolValue) Uint(c *Context) uint64 {
+func (b boolValue) Uint() uint64 {
 	if b {
 		return 1
 	}
 	return 0
 }
-func (b boolValue) Reflect(c *Context) reflect.Value { return reflect.NewValue(b) }
-func (b boolValue) Render(wr io.Writer, c *Context)  { wr.Write([]byte(b.String(c))) }
-
-// Generic function that works for any Value. Some specific Values can do this faster.
-func renderValue(v Value, wr io.Writer, c *Context) {
-	wr.Write([]byte(v.String(c)))
-}
+func (b boolValue) Reflect() reflect.Value { return reflect.NewValue(b) }
+func (b boolValue) Render(wr io.Writer, c *Context)  { wr.Write([]byte(b.String())) }
 
 type stringValue string
 
-func (str stringValue) Eval(c *Context) Value { return str }
-func (str stringValue) Bool(c *Context) bool  { return str != "" }
+func (str stringValue) Bool() bool  { return str != "" }
 
-func (str stringValue) Int(c *Context) int64 {
+func (str stringValue) Int() int64 {
 	if i, err := strconv.Atoi64(string(str)); err == nil {
 		return i
 	}
 	return 0
 }
 
-func (str stringValue) String(c *Context) string { return string(str) }
+func (str stringValue) String() string { return string(str) }
 
-func (str stringValue) Uint(c *Context) uint64 {
+func (str stringValue) Uint() uint64 {
 	if i, err := strconv.Atoui64(string(str)); err == nil {
 		return i
 	}
 	return 0
 }
 
-func (str stringValue) Reflect(c *Context) reflect.Value { return reflect.NewValue(str) }
+func (str stringValue) Reflect() reflect.Value { return reflect.NewValue(str) }
 
 func (str stringValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(string(str))) }
 
 type intValue int64
 
-func (i intValue) Bool(c *Context) bool             { return i != 0 }
-func (i intValue) Int(c *Context) int64             { return int64(i) }
-func (i intValue) String(c *Context) string         { return strconv.Itoa64(int64(i)) }
-func (i intValue) Uint(c *Context) uint64           { return uint64(i) }
-func (i intValue) Reflect(c *Context) reflect.Value { return reflect.NewValue(i) }
-func (i intValue) Eval(c *Context) Value            { return i }
+func (i intValue) Bool() bool             { return i != 0 }
+func (i intValue) Int() int64             { return int64(i) }
+func (i intValue) String() string         { return strconv.Itoa64(int64(i)) }
+func (i intValue) Uint() uint64           { return uint64(i) }
+func (i intValue) Reflect() reflect.Value { return reflect.NewValue(i) }
 
 func (i intValue) Render(wr io.Writer, c *Context) {
-	wr.Write([]byte(i.String(c)))
+	wr.Write([]byte(i.String()))
 }
 
 type floatValue float64
 
-func (f floatValue) Bool(c *Context) bool             { return f != 0 }
-func (f floatValue) Int(c *Context) int64             { return int64(f) }
-func (f floatValue) String(c *Context) string         { return strconv.Ftoa64(float64(f), 'g', -1) }
-func (f floatValue) Uint(c *Context) uint64           { return uint64(f) }
-func (f floatValue) Reflect(c *Context) reflect.Value { return reflect.NewValue(f) }
-func (f floatValue) Eval(c *Context) Value            { return f }
+func (f floatValue) Bool() bool             { return f != 0 }
+func (f floatValue) Int() int64             { return int64(f) }
+func (f floatValue) String() string         { return strconv.Ftoa64(float64(f), 'g', -1) }
+func (f floatValue) Uint() uint64           { return uint64(f) }
+func (f floatValue) Reflect() reflect.Value { return reflect.NewValue(f) }
 
 func (f floatValue) Render(wr io.Writer, c *Context) {
-	wr.Write([]byte(f.String(c)))
+	wr.Write([]byte(f.String()))
 }
 
 /*
 TODO: uncomment this when issue 1716 is fixed
 type complexValue complex128
 
-func (c complexValue) Bool(c *Context) bool { return c != 0 }
-func (c complexValue) Int(c *Context) bool { return 0 }
+func (c complexValue) Bool() bool { return c != 0 }
+func (c complexValue) Int() bool { return 0 }
 // TODO: implement
-func (c complexValue) String(c *Context) bool { return "" }
-func (c complexValue) Uint(c *Context) bool { return 0 }
-func (c complexValue) Reflect(c *Context) reflect.Value { return reflect.NewValue(c) }
+func (c complexValue) String() bool { return "" }
+func (c complexValue) Uint() bool { return 0 }
+func (c complexValue) Reflect() reflect.Value { return reflect.NewValue(c) }
 
 func (c complexValue) Render(wr io.Writer, c *Context) {
 	wr.Write([]byte(c.String(c)))
@@ -168,37 +157,36 @@ func (c complexValue) Render(wr io.Writer, c *Context) {
 // reflectValue implements the common Value methods for reflected types.
 type reflectValue reflect.Value
 
-func (v reflectValue) Bool(c *Context) bool             { return reflect.Value(v).Len() != 0 }
-func (v reflectValue) Int(c *Context) int64             { return 0 }
-func (v reflectValue) Uint(c *Context) uint64           { return 0 }
-func (v reflectValue) Reflect(c *Context) reflect.Value { return reflect.Value(v) }
+func (v reflectValue) Bool() bool             { return reflect.Value(v).Len() != 0 }
+func (v reflectValue) Int() int64             { return 0 }
+func (v reflectValue) Uint() uint64           { return 0 }
+func (v reflectValue) Reflect() reflect.Value { return reflect.Value(v) }
 
 // arrayValue represents a slice or array value
 type arrayValue struct {
 	reflectValue
 }
 
-func (a arrayValue) String(c *Context) string {
+func (a arrayValue) String() string {
 	v := reflect.Value(a.reflectValue)
 	str := "["
 	for i := 0; i < v.Len(); i++ {
 		if i > 0 {
 			str += ", "
 		}
-		str1 := quoteString(refToVal(v.Index(i)), c)
+		str1 := quoteString(refToVal(v.Index(i)))
 		str += str1
 	}
 	str += "]"
 	return str
 }
-func (a arrayValue) Eval(c *Context) Value           { return a }
-func (a arrayValue) Render(wr io.Writer, c *Context) { renderValue(a, wr, c) }
+func (a arrayValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(a.String())) }
 
 type mapValue struct {
 	reflectValue
 }
 
-func (m mapValue) String(c *Context) string {
+func (m mapValue) String() string {
 	v := reflect.Value(m.reflectValue)
 	keys := v.MapKeys()
 	str := "{"
@@ -207,41 +195,38 @@ func (m mapValue) String(c *Context) string {
 			str += ", "
 		}
 		v1 := refToVal(key)
-		str1 := quoteString(v1, c)
+		str1 := quoteString(v1)
 		str += str1
 		str += ": "
 		v1 = refToVal(v.MapIndex(key))
-		str1 = quoteString(v1, c)
+		str1 = quoteString(v1)
 		str += str1
 	}
 	str += "}"
 	return str
 }
-func (m mapValue) Eval(c *Context) Value           { return m }
-func (m mapValue) Render(wr io.Writer, c *Context) { renderValue(m, wr, c) }
+func (m mapValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(m.String())) }
 
 type chanValue struct {
 	reflectValue
 }
 
-func (ch chanValue) String(c *Context) string {
+func (ch chanValue) String() string {
 	// TODO: implement
 	return ""
 }
-func (ch chanValue) Eval(c *Context) Value           { return ch }
-func (ch chanValue) Render(wr io.Writer, c *Context) { renderValue(ch, wr, c) }
+func (ch chanValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(ch.String())) }
 
 type structValue struct {
 	reflectValue
 }
 
-func (st structValue) Bool(c *Context) bool { return true }
-func (st structValue) String(c *Context) string {
+func (st structValue) Bool() bool { return true }
+func (st structValue) String() string {
 	// TODO: implement
 	return ""
 }
-func (st structValue) Eval(c *Context) Value           { return st }
-func (st structValue) Render(wr io.Writer, c *Context) { renderValue(st, wr, c) }
+func (st structValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(st.String())) }
 
 type pointerValue struct {
 	reflectValue
@@ -249,54 +234,18 @@ type pointerValue struct {
 
 func (p pointerValue) value() Value { return refToVal(reflect.Value(p.reflectValue).Elem()) }
 // TODO: correct
-func (p pointerValue) Bool(c *Context) bool { return !reflect.Value(p.reflectValue).IsNil() }
-func (p pointerValue) String(c *Context) string {
+func (p pointerValue) Bool() bool { return !reflect.Value(p.reflectValue).IsNil() }
+func (p pointerValue) String() string {
 	if reflect.Value(p.reflectValue).IsNil() {
 		return "<nil>"
 	}
-	return p.value().String(c)
+	return p.value().String()
 }
-func (p pointerValue) Eval(c *Context) Value           { return p }
-func (p pointerValue) Render(wr io.Writer, c *Context) { renderValue(p, wr, c) }
+func (p pointerValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(p.String())) }
 
 // A Variable is an index into a Context's stack.
 // Variables must be obtained through the Parser before runtime.
 type Variable int
-
-func (v Variable) Bool(c *Context) bool {
-	if val := c.stack[v]; val != nil {
-		return val.Bool(c)
-	}
-	return false
-}
-
-func (v Variable) Int(c *Context) int64 {
-	if val := c.stack[v]; val != nil {
-		return val.Int(c)
-	}
-	return 0
-}
-
-func (v Variable) String(c *Context) string {
-	if val := c.stack[v]; val != nil {
-		return val.String(c)
-	}
-	return ""
-}
-
-func (v Variable) Uint(c *Context) uint64 {
-	if val := c.stack[v]; val != nil {
-		return val.Uint(c)
-	}
-	return 0
-}
-
-func (v Variable) Reflect(c *Context) reflect.Value {
-	if val := c.stack[v]; val != nil {
-		return val.Reflect(c)
-	}
-	return reflect.NewValue(nil)
-}
 
 func (v Variable) Eval(c *Context) Value {
 	if val := c.stack[v]; val != nil {
@@ -304,8 +253,6 @@ func (v Variable) Eval(c *Context) Value {
 	}
 	return nilValue(0)
 }
-
-func (v Variable) Render(wr io.Writer, c *Context) { renderValue(v, wr, c) }
 
 func (v Variable) Set(val Value, c *Context) { c.stack[v] = val }
 

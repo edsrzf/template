@@ -7,11 +7,11 @@ import (
 	"utf8"
 )
 
-type filterFunc func(in Value, c *Context, arg Value) Value
+type filterFunc func(in Expr, c *Context, arg Expr) Value
 
 type filter struct {
 	f    filterFunc
-	args Value
+	args Expr
 }
 
 type argType int
@@ -40,21 +40,22 @@ var filters = map[string]*regFilter{
 	"lower":          &regFilter{lowerFilter, NoArg},
 }
 
-func addFilter(in Value, c *Context, arg Value) Value {
-	l := in.Int(c)
-	r := arg.Int(c)
+func addFilter(in Expr, c *Context, arg Expr) Value {
+	l := in.Eval(c).Int()
+	r := arg.Eval(c).Int()
 	return intValue(l + r)
 }
 
-func addslashesFilter(in Value, c *Context, arg Value) Value {
-	str := in.String(c)
+func addslashesFilter(in Expr, c *Context, arg Expr) Value {
+	str := in.Eval(c).String()
 	return stringValue(strings.Replace(str, "'", "\\'", -1))
 }
 
-func capfirstFilter(in Value, c *Context, arg Value) Value {
-	str := in.String(c)
+func capfirstFilter(in Expr, c *Context, arg Expr) Value {
+	inVal := in.Eval(c)
+	str := inVal.String()
 	if len(str) == 0 {
-		return in
+		return inVal
 	}
 	b := []byte(str)
 	rune, _ := utf8.DecodeRune(b)
@@ -65,16 +66,17 @@ func capfirstFilter(in Value, c *Context, arg Value) Value {
 	return stringValue(b)
 }
 
-func centerFilter(in Value, c *Context, arg Value) Value {
-	count := int(arg.Int(c))
+func centerFilter(in Expr, c *Context, arg Expr) Value {
+	inVal := in.Eval(c)
+	count := int(arg.Eval(c).Int())
 	if count <= 0 {
-		return in
+		return inVal
 	}
-	str := in.String(c)
+	str := inVal.String()
 	runes := []int(str)
 	l := len(runes)
 	if l >= count {
-		return in
+		return inVal
 	}
 	count -= l
 	half := count / 2
@@ -86,51 +88,53 @@ func centerFilter(in Value, c *Context, arg Value) Value {
 	return stringValue(strings.Repeat(" ", half) + str + strings.Repeat(" ", count))
 }
 
-func cutFilter(in Value, c *Context, arg Value) Value {
-	str := in.String(c)
-	ch := arg.String(c)
+func cutFilter(in Expr, c *Context, arg Expr) Value {
+	str := in.Eval(c).String()
+	ch := arg.Eval(c).String()
 	return stringValue(strings.Replace(str, ch, "", -1))
 }
 
-func dateFilter(in Value, c *Context, arg Value) Value {
+func dateFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func defaultFilter(in Value, c *Context, arg Value) Value {
-	if b := in.Bool(c); b {
-		return in
+func defaultFilter(in Expr, c *Context, arg Expr) Value {
+	inVal := in.Eval(c)
+	if b := inVal.Bool(); b {
+		return inVal
 	}
-	return arg
+	return arg.Eval(c)
 }
 
-func defaultIfNilFilter(in Value, c *Context, arg Value) Value {
-	if _, ok := in.(nilValue); !ok {
-		return in
+func defaultIfNilFilter(in Expr, c *Context, arg Expr) Value {
+	inVal := in.Eval(c)
+	if _, ok := inVal.(nilValue); !ok {
+		return inVal
 	}
-	return arg
+	return arg.Eval(c)
 }
 
 // Instead of taking a list of dictionaries, it takes a slice of maps
-func dictsortFilter(in Value, c *Context, arg Value) Value {
+func dictsortFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
 // Instead of taking a list of dictionaries, it takes a slice of maps
-func dictsortreversedFilter(in Value, c *Context, arg Value) Value {
+func dictsortreversedFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func divisiblebyFilter(in Value, c *Context, arg Value) Value {
+func divisiblebyFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
 // TODO: This isn't quite right; this filter should work anywhere in a filter chain so it probably needs to be treated specially
-func escapeFilter(in Value, c *Context, arg Value) Value {
-	str := in.String(c)
+func escapeFilter(in Expr, c *Context, arg Expr) Value {
+	str := in.Eval(c).String()
 	// TODO: We can probably get better performance by implementing this ourselves
 	str = strings.Replace(str, "&", "&amp;", -1)
 	str = strings.Replace(str, "<", "&lt;", -1)
@@ -140,43 +144,43 @@ func escapeFilter(in Value, c *Context, arg Value) Value {
 	return stringValue(str)
 }
 
-func escapejsFilter(in Value, c *Context, arg Value) Value {
+func escapejsFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func filesizeformatFilter(in Value, c *Context, arg Value) Value {
+func filesizeformatFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
 // Works on slices or arrays
-func firstFilter(in Value, c *Context, arg Value) Value {
-	in = in.Eval(c)
-	v := in.Reflect(c)
+func firstFilter(in Expr, c *Context, arg Expr) Value {
+	inVal := in.Eval(c)
+	v := inVal.Reflect()
 	switch v.Kind() {
 	case reflect.String:
-		str := in.String(c)
+		str := inVal.String()
 		_, w := utf8.DecodeRuneInString(str)
 		return stringValue(str[:w])
 	case reflect.Array, reflect.Slice:
 		return refToVal(v.Index(0))
 	}
-	return in
+	return inVal
 }
 
-func fixAmpersandsFilter(in Value, c *Context, arg Value) Value {
-	str := in.String(c)
+func fixAmpersandsFilter(in Expr, c *Context, arg Expr) Value {
+	str := in.Eval(c).String()
 	return stringValue(strings.Replace(str, "&", "&amp;", -1))
 }
 
-func floatformatFilter(in Value, c *Context, arg Value) Value {
+func floatformatFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func forceEscapeFilter(in Value, c *Context, arg Value) Value {
-	str := in.String(c)
+func forceEscapeFilter(in Expr, c *Context, arg Expr) Value {
+	str := in.Eval(c).String()
 	// TODO: We can probably get better performance by implementing this ourselves
 	str = strings.Replace(str, "&", "&amp;", -1)
 	str = strings.Replace(str, "<", "&lt;", -1)
@@ -186,102 +190,104 @@ func forceEscapeFilter(in Value, c *Context, arg Value) Value {
 	return stringValue(str)
 }
 
-func getDigitFilter(in Value, c *Context, arg Value) Value {
+func getDigitFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func iriencodeFilter(in Value, c *Context, arg Value) Value {
+func iriencodeFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func joinFilter(in Value, c *Context, arg Value) Value {
+func joinFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
 // Works on slices or arrays
-func lastFilter(in Value, c *Context, arg Value) Value {
+func lastFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Work on strings also
-	list := in.Reflect(c)
+	inVal := in.Eval(c)
+	list := inVal.Reflect()
 	if list.Kind() != reflect.Array && list.Kind() != reflect.Slice {
 		// TODO: Is this right?
-		return in
+		return inVal
 	}
 	len := list.Len()
 	return refToVal(list.Index(len - 1))
 }
 
-func lengthFilter(in Value, c *Context, arg Value) Value {
-	v := in.Reflect(c)
+func lengthFilter(in Expr, c *Context, arg Expr) Value {
+	inVal := in.Eval(c)
+	v := inVal.Reflect()
 	switch v.Kind() {
 	case reflect.String:
 		return intValue(v.Len())
 	case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice:
 		return intValue(v.Len())
 	}
-	return in
+	return inVal
 }
 
-func lengthIsFilter(in Value, c *Context, arg Value) Value {
-	in = in.Eval(c)
-	l := lengthFilter(in, c, nilValue(0)).Int(c)
-	return boolValue(l == arg.Int(c))
+func lengthIsFilter(in Expr, c *Context, arg Expr) Value {
+	l := lengthFilter(in, c, nil).Int()
+	return boolValue(l == arg.Eval(c).Int())
 }
 
-func linebreaksFilter(in Value, c *Context, arg Value) Value {
-	str := in.String(c)
+func linebreaksFilter(in Expr, c *Context, arg Expr) Value {
+	str := in.Eval(c).String()
 	// TODO: We can probably get better performance by implementing this ourselves
 	str = strings.Replace(str, "\n\n", "</p>", -1)
 	str = strings.Replace(str, "\n", "<br />", -1)
 	return stringValue(str)
 }
 
-func linebreaksbrFilter(in Value, c *Context, arg Value) Value {
-	str := in.String(c)
+func linebreaksbrFilter(in Expr, c *Context, arg Expr) Value {
+	str := in.Eval(c).String()
 	// TODO: We can probably get better performance by implementing this ourselves
 	return stringValue(strings.Replace(str, "\n", "<br />", -1))
 }
 
-func linenumbersFilter(in Value, c *Context, arg Value) Value {
+func linenumbersFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func ljustFilter(in Value, c *Context, arg Value) Value {
-	count := int(arg.Int(c))
+func ljustFilter(in Expr, c *Context, arg Expr) Value {
+	inVal := in.Eval(c)
+	count := int(arg.Eval(c).Int())
 	if count <= 0 {
-		return in
+		return inVal
 	}
-	str := in.String(c)
+	str := inVal.String()
 	runes := []int(str)
 	if len(runes) >= count {
-		return in
+		return inVal
 	}
 	count -= len(runes)
 	return stringValue(str + strings.Repeat(" ", count))
 }
 
-func lowerFilter(in Value, c *Context, arg Value) Value {
-	str := in.String(c)
+func lowerFilter(in Expr, c *Context, arg Expr) Value {
+	str := in.Eval(c).String()
 	return stringValue(strings.ToLower(str))
 }
 
-func makeListFilter(in Value, c *Context, arg Value) Value {
+func makeListFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func phone2numericFilter(in Value, c *Context, arg Value) Value {
+func phone2numericFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func pluralizeFilter(in Value, c *Context, arg Value) Value {
+func pluralizeFilter(in Expr, c *Context, arg Expr) Value {
 	var single string
 	var plural string
-	suffix := arg.String(c)
+	suffix := arg.Eval(c).String()
 	if suffix == "" {
 		plural = "s"
 	} else {
@@ -294,36 +300,37 @@ func pluralizeFilter(in Value, c *Context, arg Value) Value {
 		}
 	}
 
-	if in.Uint(c) > 0 {
+	if in.Eval(c).Uint() > 0 {
 		return stringValue(plural)
 	}
 	return stringValue(single)
 }
 
-func pprintFilter(in Value, c *Context, arg Value) Value {
+func pprintFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func randomFilter(in Value, c *Context, arg Value) Value {
+func randomFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func removeTagsFilter(in Value, c *Context, arg Value) Value {
+func removeTagsFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
-	return in
+	return in.Eval(c)
 }
 
-func rjustFilter(in Value, c *Context, arg Value) Value {
-	count := int(arg.Int(c))
+func rjustFilter(in Expr, c *Context, arg Expr) Value {
+	inVal := in.Eval(c)
+	count := int(arg.Eval(c).Int())
 	if count <= 0 {
-		return in
+		return inVal
 	}
-	str := in.String(c)
+	str := inVal.String()
 	runes := []int(str)
 	if len(runes) >= count {
-		return in
+		return inVal
 	}
 	count -= len(runes)
 	return stringValue(strings.Repeat(" ", count) + str)

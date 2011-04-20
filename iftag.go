@@ -5,7 +5,7 @@ import (
 )
 
 type ifTag struct {
-	cond     Value
+	cond     Expr
 	ifNode   Node
 	elseNode Node
 }
@@ -31,36 +31,36 @@ func parseIf(p *Parser) Node {
 }
 
 func (i *ifTag) Render(wr io.Writer, c *Context) {
-	if i.cond.Bool(c) {
+	if i.cond.Eval(c).Bool() {
 		i.ifNode.Render(wr, c)
 	} else if i.elseNode != nil {
 		i.elseNode.Render(wr, c)
 	}
 }
 
-func parseCondition(p *Parser) Value {
+func parseCondition(p *Parser) Expr {
 	return p.ParseExpr()
 }
 
 type equal struct {
-	left, right *expr
+	left, right Expr
 }
 
 func (e *equal) eval(c *Context) bool {
 	// TODO: Make sure types are comparable
-	l := e.left.String(c)
-	r := e.right.String(c)
+	l := e.left.Eval(c).String()
+	r := e.right.Eval(c).String()
 	return l == r
 }
 
 type nequal struct {
-	left, right *expr
+	left, right Expr
 }
 
 func (n *nequal) eval(c *Context) bool {
 	// TODO: Make sure types are comparable
-	l := n.left.String(c)
-	r := n.right.String(c)
+	l := n.left.Eval(c).String()
+	r := n.right.Eval(c).String()
 	return l != r
 }
 
@@ -69,7 +69,7 @@ type not struct {
 }
 
 func (n *not) eval(c *Context) bool {
-	return !n.x.Bool(c)
+	return !n.x.Bool()
 }
 
 type and struct {
@@ -77,7 +77,7 @@ type and struct {
 }
 
 func (a *and) eval(c *Context) bool {
-	return a.left.Bool(c) && a.right.Bool(c)
+	return a.left.Bool() && a.right.Bool()
 }
 
 type or struct {
@@ -85,5 +85,5 @@ type or struct {
 }
 
 func (o *or) eval(c *Context) bool {
-	return o.left.Bool(c) || o.right.Bool(c)
+	return o.left.Bool() || o.right.Bool()
 }

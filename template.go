@@ -149,10 +149,27 @@ type printLit []byte
 
 func (p printLit) Render(wr io.Writer, c *Context) { wr.Write([]byte(p)) }
 
+type varTag struct {
+	e Expr
+}
+
+func (v varTag) Render(wr io.Writer, c *Context) { v.e.Eval(c).Render(wr, c) }
+
 type Template struct {
 	scope *scope
 	nodes NodeList
 }
+
+// Expr represents an expression that can be evaluated at runtime.
+type Expr interface {
+	Eval(c *Context) Value
+}
+
+type constExpr struct {
+	v Value
+}
+
+func (e constExpr) Eval(c *Context) Value { return e.v }
 
 // expr represents a Value with possible attributes and filters.
 // Attributes work like this:
@@ -167,24 +184,22 @@ type expr struct {
 	filters []*filter
 }
 
-// Returns a true or false Value for an expression.
-// false Values include:
-// - nil
-// - A slice, map, channel, array, or pointer to an array with zero len
-// - The bool Value false
-// - An empty string
-// - Zero of any numeric type
-func (e *expr) Eval(c *Context) Value {
-	val := e.v.Reflect(c)
+type attrExpr struct {
+	x Expr
+	attrs []string
+}
+
+func (e *attrExpr) Eval(c *Context) Value {
+	val := e.x.Eval(c)
+	ref := val.Reflect()
 
 	// apply attributes
-	var ret Value
-	k := val.Kind()
+	k := ref.Kind()
 	if reflect.Bool <= k && k <= reflect.Complex128 {
-		ret = e.v
+		return val
 	} else if k == reflect.String {
 		if len(e.attrs) > 0 {
-			str := e.v.String(c)
+			str := val.String()
 			idx, err := strconv.Atoi(e.attrs[0])
 			if err != nil {
 				return nilValue(0)
@@ -196,28 +211,27 @@ func (e *expr) Eval(c *Context) Value {
 				}
 				n++
 			}
-			ret = stringValue(str[i : i+utf8.RuneLen(c)])
+			return stringValue(str[i : i+utf8.RuneLen(c)])
 		} else {
-			ret = e.v
+			return val
 		}
-	} else {
-		ret = getVal(val, e.attrs)
 	}
-
-	// apply filters
-	for _, f := range e.filters {
-		ret = f.f(ret, c, f.args)
-	}
-	return ret
+	return getVal(ref, e.attrs)
 }
 
-func (e *expr) Bool(c *Context) bool             { return e.Eval(c).Bool(c) }
-func (e *expr) Int(c *Context) int64             { return e.Eval(c).Int(c) }
-func (e *expr) String(c *Context) string         { return e.Eval(c).String(c) }
-func (e *expr) Uint(c *Context) uint64           { return e.Eval(c).Uint(c) }
-func (e *expr) Reflect(c *Context) reflect.Value { return e.Eval(c).Reflect(c) }
+type filterExpr struct {
+	x Expr
+	filters []*filter
+}
 
-func (e *expr) Render(wr io.Writer, c *Context) { renderValue(e, wr, c) }
+func (e *filterExpr) Eval(c *Context) Value {
+	val :=  e.x.Eval(c)
+	// apply filters
+	for _, f := range e.filters {
+		val = f.f(constExpr{val}, c, f.args)
+	}
+	return val
+}
 
 func (t *Template) Execute(wr io.Writer, vars map[string]interface{}) {
 	c := newContext(t.scope, vars)
