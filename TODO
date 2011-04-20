@@ -1,4 +1,3 @@
 - Better error handling: don't panic, show line and column for parse errors
 - Better parser interface so that external packages can implement tags
 - Figure out how inheritance is going to work
-- Try to figure out a way to avoid passing Stacks around so often

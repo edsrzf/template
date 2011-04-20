@@ -35,14 +35,14 @@ func parseCycle(p *Parser) Node {
 	return &cycleTag{args, state}
 }
 
-func (c cycleTag) Render(wr io.Writer, s Stack) {
-	i := c.state.Int(s)
-	c.args[i].Render(wr, s)
+func (t cycleTag) Render(wr io.Writer, c *Context) {
+	i := t.state.Int(c)
+	t.args[i].Render(wr, c)
 	i++
-	if int(i) >= len(c.args) {
+	if int(i) >= len(t.args) {
 		i = 0
 	}
-	c.state.Set(intValue(i), s)
+	t.state.Set(intValue(i), c)
 }
 
 type firstofTag []Value
@@ -56,10 +56,10 @@ func parseFirstof(p *Parser) Node {
 	return tag
 }
 
-func (f firstofTag) Render(wr io.Writer, s Stack) {
+func (f firstofTag) Render(wr io.Writer, c *Context) {
 	for _, val := range f {
-		if val.Bool(s) {
-			val.Render(wr, s)
+		if val.Bool(c) {
+			val.Render(wr, c)
 			return
 		}
 	}
@@ -97,24 +97,24 @@ func parseFor(p *Parser) Node {
 }
 
 // TODO: this needs reworking. We need a good way to set Variables on the stack.
-func (f *forTag) Render(wr io.Writer, s Stack) {
-	f.init.Render(wr, s)
-	v := f.collection.Reflect(s)
+func (f *forTag) Render(wr io.Writer, c *Context) {
+	f.init.Render(wr, c)
+	v := f.collection.Reflect(c)
 	v = reflect.Indirect(v)
 	n := 0
 	switch v.Kind() {
 	case reflect.String:
-		v := f.collection.String(s)
+		v := f.collection.String(c)
 		n = len(v)
-		for _, c := range v {
-			f.v.Set(stringValue(c), s)
-			f.body.Render(wr, s)
+		for _, ch := range v {
+			f.v.Set(stringValue(ch), c)
+			f.body.Render(wr, c)
 		}
 	case reflect.Array, reflect.Slice:
 		n = v.Len()
 		for i := 0; i < n; i++ {
-			f.v.Set(refToVal(v.Index(i)), s)
-			f.body.Render(wr, s)
+			f.v.Set(refToVal(v.Index(i)), c)
+			f.body.Render(wr, c)
 		}
 	case reflect.Chan:
 		for {
@@ -122,25 +122,25 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 			if !ok {
 				break
 			}
-			f.v.Set(refToVal(x), s)
-			f.body.Render(wr, s)
+			f.v.Set(refToVal(x), c)
+			f.body.Render(wr, c)
 			n++
 		}
 	case reflect.Map:
 		n = v.Len()
 		for _, k := range v.MapKeys() {
-			f.v.Set(refToVal(v.MapIndex(k)), s)
-			f.body.Render(wr, s)
+			f.v.Set(refToVal(v.MapIndex(k)), c)
+			f.body.Render(wr, c)
 		}
 	case reflect.Struct:
 		n = v.NumField()
 		for i := 0; i < n; i++ {
-			f.v.Set(refToVal(v.Field(i)), s)
-			f.body.Render(wr, s)
+			f.v.Set(refToVal(v.Field(i)), c)
+			f.body.Render(wr, c)
 		}
 	}
 	if n == 0 && f.elseNode != nil {
-		f.elseNode.Render(wr, s)
+		f.elseNode.Render(wr, c)
 	}
 }
 
@@ -176,20 +176,20 @@ func parseIfChanged(p *Parser) Node {
 	return &ifChangedTag{args, vars, ifNodes, elseNodes}
 }
 
-func (t *ifChangedTag) Render(wr io.Writer, s Stack) {
+func (t *ifChangedTag) Render(wr io.Writer, c *Context) {
 	changed := false
 	for i, v := range t.last {
-		new := t.vals[i].Eval(s)
+		new := t.vals[i].Eval(c)
 		// TODO: new != old can panic depending on the concrete values
-		if !changed && new != v.Eval(s) {
+		if !changed && new != v.Eval(c) {
 			changed = true
 		}
-		v.Set(new, s)
+		v.Set(new, c)
 	}
 	if changed {
-		t.ifNodes.Render(wr, s)
+		t.ifNodes.Render(wr, c)
 	} else if t.elseNodes != nil {
-		t.elseNodes.Render(wr, s)
+		t.elseNodes.Render(wr, c)
 	}
 }
 
@@ -205,8 +205,8 @@ func parseSet(p *Parser) Node {
 	return &setTag{v, e}
 }
 
-func (t *setTag) Render(wr io.Writer, s Stack) {
-	t.v.Set(t.e.Eval(s), s)
+func (t *setTag) Render(wr io.Writer, c *Context) {
+	t.v.Set(t.e.Eval(c), c)
 }
 
 type with NodeList
@@ -225,4 +225,4 @@ func parseWith(p *Parser) Node {
 	return with(nodes)
 }
 
-func (w with) Render(wr io.Writer, s Stack) { NodeList(w).Render(wr, s) }
+func (w with) Render(wr io.Writer, c *Context) { NodeList(w).Render(wr, c) }

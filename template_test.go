@@ -6,9 +6,12 @@ import (
 	"testing"
 )
 
+// to save typing
+type c map[string]interface{}
+
 type templateTest struct {
 	template string
-	context  Context
+	vars     map[string]interface{}
 	out      string
 }
 
@@ -27,18 +30,18 @@ var templateTests = []templateTest{
 	templateTest{"{{ 'hello' }}", nil, "hello"},
 	templateTest{"{{ \"hello\" }}", nil, "hello"},
 	templateTest{"{{ 1 }} {{ 2 }}", nil, "1 2"},
-	templateTest{"{{ var }}", Context{"var": "hello"}, "hello"},
-	templateTest{" {{ var }}", Context{"var": []int{1, 2, 3}}, " [1, 2, 3]"},
-	templateTest{"{{ var }}", Context{"var": map[int]string{1: "one"}}, "{1: 'one'}"},
+	templateTest{"{{ var }}", c{"var": "hello"}, "hello"},
+	templateTest{" {{ var }}", c{"var": []int{1, 2, 3}}, " [1, 2, 3]"},
+	templateTest{"{{ var }}", c{"var": map[int]string{1: "one"}}, "{1: 'one'}"},
 	templateTest{"{{ 'hello'.1 }}", nil, "e"},
-	templateTest{"{{ var.1 }}", Context{"var": "hello"}, "e"},
-	templateTest{"{{ var.0 }}", Context{"var": []int{14}}, "14"},
-	templateTest{"{{ var.13 }}", Context{"var": [14]int{13: 11}}, "11"},
-	templateTest{"{{ var.test }}", Context{"var": map[string]string{"test": "hello"}}, "hello"},
-	templateTest{"{{ var.42 }}", Context{"var": map[int]int{42: 67}}, "67"},
-	templateTest{"{{ var.42 }}", Context{"var": map[int16]int16{42: 67}}, "67"},
-	templateTest{"{{ var.a }}", Context{"var": testStruct{4, 3.14}}, "4"},
-	templateTest{"{{ var.b }}", Context{"var": &testStruct{4, 3.14}}, "3.14"},
+	templateTest{"{{ var.1 }}", c{"var": "hello"}, "e"},
+	templateTest{"{{ var.0 }}", c{"var": []int{14}}, "14"},
+	templateTest{"{{ var.13 }}", c{"var": [14]int{13: 11}}, "11"},
+	templateTest{"{{ var.test }}", c{"var": map[string]string{"test": "hello"}}, "hello"},
+	templateTest{"{{ var.42 }}", c{"var": map[int]int{42: 67}}, "67"},
+	templateTest{"{{ var.42 }}", c{"var": map[int16]int16{42: 67}}, "67"},
+	templateTest{"{{ var.a }}", c{"var": testStruct{4, 3.14}}, "4"},
+	templateTest{"{{ var.b }}", c{"var": &testStruct{4, 3.14}}, "3.14"},
 }
 
 func testTemplates(t *testing.T, templates []templateTest) {
@@ -48,7 +51,7 @@ func testTemplates(t *testing.T, templates []templateTest) {
 			t.Errorf("#%d failed to parse: %s", i, err.String())
 		}
 		buf := bytes.NewBuffer(nil)
-		temp.Execute(buf, test.context)
+		temp.Execute(buf, test.vars)
 		if buf.String() != test.out {
 			t.Errorf("#%d got %s want %s", i, buf.String(), test.out)
 		}
@@ -95,10 +98,10 @@ func BenchmarkTemplateExecute(b *testing.B) {
 		table[i] = map[string]int{"a": 1, "b": 2, "c": 3, "d": 4, "e": 5, "f": 6, "g": 7, "h": 8, "i": 9, "j": 10}
 	}
 	t, _ := ParseString(bench)
-	c := Context{"table": table}
+	vars := c{"table": table}
 	w := nilWriter(0)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		t.Execute(w, c)
+		t.Execute(w, vars)
 	}
 }

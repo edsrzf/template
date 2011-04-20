@@ -7,9 +7,22 @@ import (
 	"utf8"
 )
 
-type Context map[string]interface{}
+type Context struct {
+	vars  map[string]interface{}
+	stack []Value
+}
 
-type Stack []Value
+func newContext(s *scope, vars map[string]interface{}) *Context {
+	stack := make([]Value, s.maxLen)
+	if vars != nil {
+		for k, v := range s.top() {
+			if val, ok := vars[k]; ok {
+				stack[v] = refToVal(reflect.NewValue(val))
+			}
+		}
+	}
+	return &Context{vars, stack}
+}
 
 type scopeLevel struct {
 	named map[string]Variable
@@ -109,34 +122,32 @@ func (s *scope) Anonymous(init Value) Variable {
 
 type initNode map[Variable]Value
 
-func (i initNode) Render(wr io.Writer, s Stack) {
+func (i initNode) Render(wr io.Writer, c *Context) {
 	for v, val := range i {
-		v.Set(val, s)
+		v.Set(val, c)
 	}
 }
 
 // A Node represents a part of the Template, such as a tag or a block of text.
 type Node interface {
-	// Render evaluates the node with the given Stack and writes the result to
+	// Render evaluates the node with the given Context and writes the result to
 	// wr.
 	// Render should be reentrant. If the Node needs to store state, it should
 	// allocate a Variable on the stack during parsing and use that Variable.
-	// The parameter s should only be used when calling a Value's Value method.
-	// Nodes should not access s directly.
-	Render(wr io.Writer, s Stack)
+	Render(wr io.Writer, c *Context)
 }
 
 type NodeList []Node
 
-func (l NodeList) Render(wr io.Writer, s Stack) {
+func (l NodeList) Render(wr io.Writer, c *Context) {
 	for _, r := range l {
-		r.Render(wr, s)
+		r.Render(wr, c)
 	}
 }
 
 type printLit []byte
 
-func (p printLit) Render(wr io.Writer, s Stack) { wr.Write([]byte(p)) }
+func (p printLit) Render(wr io.Writer, c *Context) { wr.Write([]byte(p)) }
 
 type Template struct {
 	scope *scope
@@ -163,8 +174,8 @@ type expr struct {
 // - The bool Value false
 // - An empty string
 // - Zero of any numeric type
-func (e *expr) Eval(s Stack) Value {
-	val := e.v.Reflect(s)
+func (e *expr) Eval(c *Context) Value {
+	val := e.v.Reflect(c)
 
 	// apply attributes
 	var ret Value
@@ -173,7 +184,7 @@ func (e *expr) Eval(s Stack) Value {
 		ret = e.v
 	} else if k == reflect.String {
 		if len(e.attrs) > 0 {
-			str := e.v.String(s)
+			str := e.v.String(c)
 			idx, err := strconv.Atoi(e.attrs[0])
 			if err != nil {
 				return nilValue(0)
@@ -195,32 +206,25 @@ func (e *expr) Eval(s Stack) Value {
 
 	// apply filters
 	for _, f := range e.filters {
-		ret = f.f(ret, s, f.args)
+		ret = f.f(ret, c, f.args)
 	}
 	return ret
 }
 
-func (e *expr) Bool(s Stack) bool             { return e.Eval(s).Bool(s) }
-func (e *expr) Int(s Stack) int64             { return e.Eval(s).Int(s) }
-func (e *expr) String(s Stack) string         { return e.Eval(s).String(s) }
-func (e *expr) Uint(s Stack) uint64           { return e.Eval(s).Uint(s) }
-func (e *expr) Reflect(s Stack) reflect.Value { return e.Eval(s).Reflect(s) }
+func (e *expr) Bool(c *Context) bool             { return e.Eval(c).Bool(c) }
+func (e *expr) Int(c *Context) int64             { return e.Eval(c).Int(c) }
+func (e *expr) String(c *Context) string         { return e.Eval(c).String(c) }
+func (e *expr) Uint(c *Context) uint64           { return e.Eval(c).Uint(c) }
+func (e *expr) Reflect(c *Context) reflect.Value { return e.Eval(c).Reflect(c) }
 
-func (e *expr) Render(wr io.Writer, s Stack) { renderValue(e, wr, s) }
+func (e *expr) Render(wr io.Writer, c *Context) { renderValue(e, wr, c) }
 
-func (t *Template) Execute(wr io.Writer, c Context) {
-	s := make(Stack, t.scope.maxLen)
-	if c != nil {
-		for k, v := range t.scope.top() {
-			if val, ok := c[k]; ok {
-				s[v] = refToVal(reflect.NewValue(val))
-			}
-		}
-	}
-	t.Render(wr, s)
+func (t *Template) Execute(wr io.Writer, vars map[string]interface{}) {
+	c := newContext(t.scope, vars)
+	t.Render(wr, c)
 }
 
-func (t *Template) Render(wr io.Writer, s Stack) {
-	t.scope.levels[0].init.Render(wr, s)
-	t.nodes.Render(wr, s)
+func (t *Template) Render(wr io.Writer, c *Context) {
+	t.scope.levels[0].init.Render(wr, c)
+	t.nodes.Render(wr, c)
 }

@@ -30,11 +30,11 @@ func parseIf(p *Parser) Node {
 	return tag
 }
 
-func (i *ifTag) Render(wr io.Writer, s Stack) {
-	if i.cond.Bool(s) {
-		i.ifNode.Render(wr, s)
+func (i *ifTag) Render(wr io.Writer, c *Context) {
+	if i.cond.Bool(c) {
+		i.ifNode.Render(wr, c)
 	} else if i.elseNode != nil {
-		i.elseNode.Render(wr, s)
+		i.elseNode.Render(wr, c)
 	}
 }
 
@@ -46,10 +46,10 @@ type equal struct {
 	left, right *expr
 }
 
-func (e *equal) eval(s Stack) bool {
+func (e *equal) eval(c *Context) bool {
 	// TODO: Make sure types are comparable
-	l := e.left.String(s)
-	r := e.right.String(s)
+	l := e.left.String(c)
+	r := e.right.String(c)
 	return l == r
 }
 
@@ -57,10 +57,10 @@ type nequal struct {
 	left, right *expr
 }
 
-func (n *nequal) eval(s Stack) bool {
+func (n *nequal) eval(c *Context) bool {
 	// TODO: Make sure types are comparable
-	l := n.left.String(s)
-	r := n.right.String(s)
+	l := n.left.String(c)
+	r := n.right.String(c)
 	return l != r
 }
 
@@ -68,22 +68,22 @@ type not struct {
 	x Value
 }
 
-func (n *not) eval(s Stack) bool {
-	return !n.x.Bool(s)
+func (n *not) eval(c *Context) bool {
+	return !n.x.Bool(c)
 }
 
 type and struct {
 	left, right Value
 }
 
-func (a *and) eval(s Stack) bool {
-	return a.left.Bool(s) && a.right.Bool(s)
+func (a *and) eval(c *Context) bool {
+	return a.left.Bool(c) && a.right.Bool(c)
 }
 
 type or struct {
 	left, right Value
 }
 
-func (o *or) eval(s Stack) bool {
-	return o.left.Bool(s) || o.right.Bool(s)
+func (o *or) eval(c *Context) bool {
+	return o.left.Bool(c) || o.right.Bool(c)
 }
