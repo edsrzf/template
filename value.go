@@ -296,18 +296,14 @@ func refToVal(ref reflect.Value) Value {
 	return nilValue(0)
 }
 
-func listElem(v reflect.Value, s string) reflect.Value {
-	if idx, err := strconv.Atoi(s); err == nil {
-		return v.Index(idx)
-	}
-	return reflect.Value{}
-}
-
 func lookup(v reflect.Value, s string) reflect.Value {
 	var ret reflect.Value
+	v = reflect.Indirect(v)
 	switch v.Kind() {
 	case reflect.Array, reflect.Slice:
-		ret = listElem(v, s)
+		if idx, err := strconv.Atoi(s); err == nil {
+			ret = v.Index(idx)
+		}
 	case reflect.Map:
 		keyt := v.Type().Key()
 		switch keyt.Kind() {
@@ -325,14 +321,6 @@ func lookup(v reflect.Value, s string) reflect.Value {
 				idxVal.SetUint(idx)
 				ret = v.MapIndex(idxVal)
 			}
-		}
-	case reflect.Ptr:
-		v := v.Elem()
-		switch v.Kind() {
-		case reflect.Array, reflect.Slice:
-			ret = listElem(v, s)
-		case reflect.Struct:
-			ret = v.FieldByName(s)
 		}
 	case reflect.Struct:
 		ret = v.FieldByName(s)
