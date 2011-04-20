@@ -7,6 +7,7 @@ import (
 var tagTests = []templateTest{
 	// cycle
 	templateTest{"{% for c in 'abcd' %}{% cycle 1 'a' var %}{% endfor %}", Context{"var": 3.14}, "1a3.141"},
+	templateTest{"{% for c in 'abcd' %}{% cycle 1 2 3 %}{% endfor %}{% for c in 'ab' %}{% cycle 1 2 %}{% endfor %}", nil, "123112"},
 
 	// firstof
 	templateTest{"{% firstof %}", nil, ""},
@@ -34,6 +35,7 @@ var tagTests = []templateTest{
 	// ifchanged
 	templateTest{"{% for n in '122344' %}{% ifchanged n %}c{% endifchanged %}{% endfor %}", nil, "cccc"},
 	templateTest{"{% for n in '122344' %}{% ifchanged n %}c{% else %}s{% endifchanged %}{% endfor %}", nil, "ccsccs"},
+	templateTest{"{% ifchanged var %}c{% endifchanged %}", nil, "c"},
 
 	// set
 	templateTest{"{% set var1 1 %}{% set var2 'hi' %}{% set var3 3.14 %}{{ var1 }} {{ var2 }} {{ var3 }}", nil, "1 hi 3.14"},

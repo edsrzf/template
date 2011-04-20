@@ -31,7 +31,7 @@ func parseCycle(p *parser) Node {
 	if len(args) < 1 {
 		p.Error("the cycle tag requires at least one parameter")
 	}
-	state := p.s.Anonymous()
+	state := p.s.Anonymous(intValue(0))
 	return &cycleTag{args, state}
 }
 
@@ -68,13 +68,13 @@ func (f firstofTag) Render(wr io.Writer, s Stack) {
 type forTag struct {
 	v          Variable
 	collection Value
-	r          Node
+	init       Node
+	body       Node
 	elseNode   Node
 }
 
 func parseFor(p *parser) Node {
 	p.s.Push()
-	defer p.s.Pop()
 	name := p.Expect(tokIdent)
 	v := p.s.Insert(name)
 	p.ExpectWord("in")
@@ -84,7 +84,7 @@ func parseFor(p *parser) Node {
 		p.Error("numeric literals are not iterable")
 	}
 	p.Expect(tokBlockTagEnd)
-	tok, r := p.ParseUntil("else", "endfor")
+	tok, body := p.ParseUntil("else", "endfor")
 	var elseNode Node
 	if tok == "else" {
 		p.Expect(tokBlockTagEnd)
@@ -93,11 +93,12 @@ func parseFor(p *parser) Node {
 	if tok != "endfor" {
 		p.Error("unterminated for tag")
 	}
-	return &forTag{v, collection, r, elseNode}
+	return &forTag{v, collection, p.s.Pop(), body, elseNode}
 }
 
 // TODO: this needs reworking. We need a good way to set Variables on the stack.
 func (f *forTag) Render(wr io.Writer, s Stack) {
+	f.init.Render(wr, s)
 	v := f.collection.Reflect(s)
 	v = reflect.Indirect(v)
 	n := 0
@@ -107,13 +108,13 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 		n = len(v)
 		for _, c := range v {
 			f.v.Set(stringValue(c), s)
-			f.r.Render(wr, s)
+			f.body.Render(wr, s)
 		}
 	case reflect.Array, reflect.Slice:
 		n = v.Len()
 		for i := 0; i < n; i++ {
 			f.v.Set(refToVal(v.Index(i)), s)
-			f.r.Render(wr, s)
+			f.body.Render(wr, s)
 		}
 	case reflect.Chan:
 		for {
@@ -122,20 +123,20 @@ func (f *forTag) Render(wr io.Writer, s Stack) {
 				break
 			}
 			f.v.Set(refToVal(x), s)
-			f.r.Render(wr, s)
+			f.body.Render(wr, s)
 			n++
 		}
 	case reflect.Map:
 		n = v.Len()
 		for _, k := range v.MapKeys() {
 			f.v.Set(refToVal(v.MapIndex(k)), s)
-			f.r.Render(wr, s)
+			f.body.Render(wr, s)
 		}
 	case reflect.Struct:
 		n = v.NumField()
 		for i := 0; i < n; i++ {
 			f.v.Set(refToVal(v.Field(i)), s)
-			f.r.Render(wr, s)
+			f.body.Render(wr, s)
 		}
 	}
 	if n == 0 && f.elseNode != nil {
@@ -159,7 +160,9 @@ func parseIfChanged(p *parser) Node {
 	p.Expect(tokBlockTagEnd)
 	vars := make([]Variable, len(args))
 	for i := range vars {
-		vars[i] = p.s.Anonymous()
+		// use a value that can never otherwise occur so we always detect a
+		// change the first time
+		vars[i] = p.s.Anonymous(nilValue(1))
 	}
 	tok, ifNodes := p.ParseUntil("else", "endifchanged")
 	var elseNodes NodeList
@@ -173,17 +176,15 @@ func parseIfChanged(p *parser) Node {
 	return &ifChangedTag{args, vars, ifNodes, elseNodes}
 }
 
-// TODO: On the first Render, we could get a false negative if all the
-// ifchanged expressions happen to evaluate to nilValue(0).
 func (t *ifChangedTag) Render(wr io.Writer, s Stack) {
 	changed := false
 	for i, v := range t.last {
-		val := t.vals[i].Eval(s)
-		// TODO: this comparison can panic depending on the concrete values
-		if !changed && v.Eval(s) != val {
+		new := t.vals[i].Eval(s)
+		// TODO: new != old can panic depending on the concrete values
+		if !changed && new != v.Eval(s) {
 			changed = true
 		}
-		v.Set(val, s)
+		v.Set(new, s)
 	}
 	if changed {
 		t.ifNodes.Render(wr, s)
@@ -212,12 +213,15 @@ type with NodeList
 
 func parseWith(p *parser) Node {
 	p.s.Push()
-	defer p.s.Pop()
 	p.Expect(tokBlockTagEnd)
 	tok, nodes := p.ParseUntil("endwith")
 	if tok != "endwith" {
 		p.Error("unterminated with tag")
 	}
+	init := p.s.Pop()
+	nodes = append(nodes, nil)
+	copy(nodes[1:], nodes)
+	nodes[0] = init
 	return with(nodes)
 }
 

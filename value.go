@@ -297,7 +297,13 @@ func (v Variable) Reflect(s Stack) reflect.Value {
 	return reflect.NewValue(nil)
 }
 
-func (v Variable) Eval(s Stack) Value           { return s[v] }
+func (v Variable) Eval(s Stack) Value {
+	if val := s[v]; val != nil {
+		return val
+	}
+	return nilValue(0)
+}
+
 func (v Variable) Render(wr io.Writer, s Stack) { renderValue(v, wr, s) }
 
 func (v Variable) Set(val Value, s Stack) { s[v] = val }

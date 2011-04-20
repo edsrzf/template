@@ -13,18 +13,22 @@ type Stack []Value
 
 type scopeLevel struct {
 	named map[string]Variable
-	// the number of anonymous variables at this level
-	anon int
+	// This node initializes anonymous variables.
+	// It's up to the popper of this level to make sure these run.
+	init initNode
 }
 
 type scope struct {
-	levels []scopeLevel
+	levels []*scopeLevel
 	// the greatest number of Variables this scope and its children can hold
 	maxLen int
 }
 
 func newScope() *scope {
-	return &scope{levels: []scopeLevel{{named: map[string]Variable{}}}}
+	s := new(scope)
+	level := &scopeLevel{map[string]Variable{}, map[Variable]Value{}}
+	s.levels = []*scopeLevel{level}
+	return s
 }
 
 func (s *scope) top() map[string]Variable {
@@ -33,18 +37,21 @@ func (s *scope) top() map[string]Variable {
 
 // Push creates a new scope level
 func (s *scope) Push() {
-	s.levels = append(s.levels, scopeLevel{named: map[string]Variable{}})
+	level := &scopeLevel{map[string]Variable{}, map[Variable]Value{}}
+	s.levels = append(s.levels, level)
 }
 
 // Pop removes the top scope
-func (s *scope) Pop() {
+func (s *scope) Pop() Node {
 	if len(s.levels) == 1 {
-		return
+		return initNode(nil)
 	}
 	if s.maxLen < s.len() {
 		s.maxLen = s.len()
 	}
+	node := s.levels[len(s.levels)-1].init
 	s.levels = s.levels[:len(s.levels)-1]
+	return node
 }
 
 // len returns the number of variables that need to be allocated for the
@@ -52,7 +59,7 @@ func (s *scope) Pop() {
 func (s *scope) len() int {
 	l := 0
 	for _, level := range s.levels {
-		l += len(level.named) + level.anon
+		l += len(level.named) + len(level.init)
 	}
 	return l
 }
@@ -92,11 +99,20 @@ func (s *scope) Insert(name string) Variable {
 // Anonymous creates a new anonymous Variable at the top scope and returns it.
 // This is useful for Nodes that might Render more than once and want to
 // store state between Renders.
-func (s *scope) Anonymous() Variable {
+func (s *scope) Anonymous(init Value) Variable {
 	v := Variable(s.len())
-	s.levels[len(s.levels)-1].anon++
+	level := s.levels[len(s.levels)-1]
+	level.init[v] = init
 	s.maxLen++
 	return v
+}
+
+type initNode map[Variable]Value
+
+func (i initNode) Render(wr io.Writer, s Stack) {
+	for v, val := range i {
+		v.Set(val, s)
+	}
 }
 
 // A Node represents a part of the Template, such as a tag or a block of text.
@@ -160,7 +176,7 @@ func (e *expr) Eval(s Stack) Value {
 			str := e.v.String(s)
 			idx, err := strconv.Atoi(e.attrs[0])
 			if err != nil {
-				return nil
+				return nilValue(0)
 			}
 			var n, i, c int
 			for i, c = range str {
@@ -201,5 +217,10 @@ func (t *Template) Execute(wr io.Writer, c Context) {
 			}
 		}
 	}
+	t.Render(wr, s)
+}
+
+func (t *Template) Render(wr io.Writer, s Stack) {
+	t.scope.levels[0].init.Render(wr, s)
 	t.nodes.Render(wr, s)
 }
