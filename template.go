@@ -17,7 +17,7 @@ func newContext(s *scope, vars map[string]interface{}) *Context {
 	if vars != nil {
 		for k, v := range s.top() {
 			if val, ok := vars[k]; ok {
-				stack[v] = refToVal(reflect.NewValue(val))
+				stack[v] = refToVal(reflect.ValueOf(val))
 			}
 		}
 	}
@@ -185,7 +185,7 @@ type expr struct {
 }
 
 type attrExpr struct {
-	x Expr
+	x     Expr
 	attrs []string
 }
 
@@ -220,12 +220,12 @@ func (e *attrExpr) Eval(c *Context) Value {
 }
 
 type filterExpr struct {
-	x Expr
+	x       Expr
 	filters []*filter
 }
 
 func (e *filterExpr) Eval(c *Context) Value {
-	val :=  e.x.Eval(c)
+	val := e.x.Eval(c)
 	// apply filters
 	for _, f := range e.filters {
 		val = f.f(constExpr{val}, c, f.args)

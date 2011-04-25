@@ -59,16 +59,16 @@ type Value interface {
 
 type nilValue byte
 
-func (n nilValue) Bool() bool             { return false }
-func (n nilValue) Int() int64             { return 0 }
-func (n nilValue) String() string         { return "" }
-func (n nilValue) Uint() uint64           { return 0 }
-func (n nilValue) Reflect() reflect.Value { return reflect.NewValue(nil) }
-func (n nilValue) Render(wr io.Writer, c *Context)  {}
+func (n nilValue) Bool() bool                      { return false }
+func (n nilValue) Int() int64                      { return 0 }
+func (n nilValue) String() string                  { return "" }
+func (n nilValue) Uint() uint64                    { return 0 }
+func (n nilValue) Reflect() reflect.Value          { return reflect.ValueOf(nil) }
+func (n nilValue) Render(wr io.Writer, c *Context) {}
 
 type boolValue bool
 
-func (b boolValue) Bool() bool  { return bool(b) }
+func (b boolValue) Bool() bool { return bool(b) }
 func (b boolValue) Int() int64 {
 	if b {
 		return 1
@@ -87,12 +87,12 @@ func (b boolValue) Uint() uint64 {
 	}
 	return 0
 }
-func (b boolValue) Reflect() reflect.Value { return reflect.NewValue(b) }
-func (b boolValue) Render(wr io.Writer, c *Context)  { wr.Write([]byte(b.String())) }
+func (b boolValue) Reflect() reflect.Value          { return reflect.ValueOf(b) }
+func (b boolValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(b.String())) }
 
 type stringValue string
 
-func (str stringValue) Bool() bool  { return str != "" }
+func (str stringValue) Bool() bool { return str != "" }
 
 func (str stringValue) Int() int64 {
 	if i, err := strconv.Atoi64(string(str)); err == nil {
@@ -110,7 +110,7 @@ func (str stringValue) Uint() uint64 {
 	return 0
 }
 
-func (str stringValue) Reflect() reflect.Value { return reflect.NewValue(str) }
+func (str stringValue) Reflect() reflect.Value { return reflect.ValueOf(str) }
 
 func (str stringValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(string(str))) }
 
@@ -120,7 +120,7 @@ func (i intValue) Bool() bool             { return i != 0 }
 func (i intValue) Int() int64             { return int64(i) }
 func (i intValue) String() string         { return strconv.Itoa64(int64(i)) }
 func (i intValue) Uint() uint64           { return uint64(i) }
-func (i intValue) Reflect() reflect.Value { return reflect.NewValue(i) }
+func (i intValue) Reflect() reflect.Value { return reflect.ValueOf(i) }
 
 func (i intValue) Render(wr io.Writer, c *Context) {
 	wr.Write([]byte(i.String()))
@@ -132,7 +132,7 @@ func (f floatValue) Bool() bool             { return f != 0 }
 func (f floatValue) Int() int64             { return int64(f) }
 func (f floatValue) String() string         { return strconv.Ftoa64(float64(f), 'g', -1) }
 func (f floatValue) Uint() uint64           { return uint64(f) }
-func (f floatValue) Reflect() reflect.Value { return reflect.NewValue(f) }
+func (f floatValue) Reflect() reflect.Value { return reflect.ValueOf(f) }
 
 func (f floatValue) Render(wr io.Writer, c *Context) {
 	wr.Write([]byte(f.String()))
@@ -308,7 +308,7 @@ func lookup(v reflect.Value, s string) reflect.Value {
 		keyt := v.Type().Key()
 		switch keyt.Kind() {
 		case reflect.String:
-			ret = v.MapIndex(reflect.NewValue(s))
+			ret = v.MapIndex(reflect.ValueOf(s))
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			if idx, err := strconv.Atoi64(s); err == nil {
 				idxVal := reflect.New(keyt).Elem()
