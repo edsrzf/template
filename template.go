@@ -235,10 +235,17 @@ func (e *filterExpr) Eval(c *Context) Value {
 
 func (t *Template) Execute(wr io.Writer, vars map[string]interface{}) {
 	c := newContext(t.scope, vars)
-	t.Render(wr, c)
+	t.render(wr, c)
 }
 
 func (t *Template) Render(wr io.Writer, c *Context) {
+	// we have to create a new Context that matches this template's
+	// stack layout.
+	c = newContext(t.scope, c.vars)
+	t.render(wr, c)
+}
+
+func (t *Template) render(wr io.Writer, c *Context) {
 	t.scope.levels[0].init.Render(wr, c)
 	t.nodes.Render(wr, c)
 }

@@ -2,7 +2,6 @@ package template
 
 import (
 	"bytes"
-	"os"
 	"testing"
 )
 
@@ -53,7 +52,7 @@ func testTemplates(t *testing.T, templates []templateTest) {
 		buf := bytes.NewBuffer(nil)
 		temp.Execute(buf, test.vars)
 		if buf.String() != test.out {
-			t.Errorf("#%d got %s want %s", i, buf.String(), test.out)
+			t.Errorf("#%d got %q want %q", i, buf.String(), test.out)
 		}
 	}
 }
@@ -83,12 +82,6 @@ func BenchmarkTemplateParseString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		ParseString(bench)
 	}
-}
-
-type nilWriter int
-
-func (w nilWriter) Write(b []byte) (int, os.Error) {
-	return len(b), nil
 }
 
 func BenchmarkTemplateExecute(b *testing.B) {

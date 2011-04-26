@@ -1,20 +1,50 @@
 package template
 
 import (
+	"bytes"
 	"io"
+	"os"
 	"reflect"
 )
 
 type TagFunc func(p *Parser) Node
 
 var tags = map[string]TagFunc{
+	"block":     parseBlock,
 	"cycle":     parseCycle,
+	"extends":   parseExtends,
 	"firstof":   parseFirstof,
 	"for":       parseFor,
 	"if":        parseIf,
 	"ifchanged": parseIfChanged,
+	"override":  parseOverride,
 	"set":       parseSet,
 	"with":      parseWith,
+}
+
+type blockTag struct {
+	name  Variable
+	nodes NodeList
+}
+
+func parseBlock(p *Parser) Node {
+	name := p.Expect(TokIdent)
+	p.Expect(TokTagEnd)
+	tok, nodes := p.ParseUntil("endblock")
+	if tok != "endblock" {
+		p.Error("unterminated block tag")
+	}
+	nameVar := p.s.Lookup("@" + name)
+	return &blockTag{nameVar, nodes}
+}
+
+func (b *blockTag) Render(wr io.Writer, c *Context) {
+	val := b.name.Eval(c)
+	if val.Bool() {
+		val.Render(wr, c)
+		return
+	}
+	b.nodes.Render(wr, c)
 }
 
 type cycleTag struct {
@@ -43,6 +73,42 @@ func (t cycleTag) Render(wr io.Writer, c *Context) {
 		i = 0
 	}
 	t.state.Set(intValue(i), c)
+}
+
+type extendsTag struct {
+	parent Expr
+	nodes NodeList
+}
+
+func parseExtends(p *Parser) Node {
+	parent := p.ParseExpr()
+	p.Expect(TokTagEnd)
+	tok, nodes := p.ParseUntil("endextends")
+	if tok != "endextends" {
+		p.Error("unterminated extends tag")
+	}
+	return &extendsTag{parent, nodes}
+}
+
+type nilWriter int
+
+func (w nilWriter) Write(p []byte) (int, os.Error) { return len(p), nil }
+
+func (e *extendsTag) Render(wr io.Writer, c *Context) {
+	parentValue := e.parent.Eval(c)
+	node, ok := parentValue.Reflect().Interface().(*Template)
+	if !ok {
+		// must be a string
+		filename := parentValue.String()
+		var err os.Error
+		node, err = ParseFile(filename)
+		if err != nil {
+			return
+		}
+	}
+	w := nilWriter(0)
+	e.nodes.Render(w, c)
+	node.Render(wr, c)
 }
 
 type firstofTag []Expr
@@ -193,6 +259,32 @@ func (t *ifChangedTag) Render(wr io.Writer, c *Context) {
 type setTag struct {
 	v Variable
 	e Expr
+}
+
+type overrideTag struct {
+	name  string
+	nameVar Variable
+	nodes NodeList
+}
+
+func parseOverride(p *Parser) Node {
+	name := p.Expect(TokIdent)
+	p.Expect(TokTagEnd)
+	tok, nodes := p.ParseUntil("endoverride")
+	if tok != "endoverride" {
+		p.Error("unterminated block tag")
+	}
+	name = "@" + name
+	nameVar := p.s.Lookup(name)
+	return &overrideTag{name, nameVar, nodes}
+}
+
+func (o *overrideTag) Render(wr io.Writer, c *Context) {
+	var buf bytes.Buffer
+	o.nodes.Render(&buf, c)
+	str := buf.String()
+	o.nameVar.Set(stringValue(str), c)
+	c.vars[o.name] = str
 }
 
 func parseSet(p *Parser) Node {

@@ -4,6 +4,8 @@ import (
 	"testing"
 )
 
+var parentTemplate = MustParseString("parent start {% block title %}parent title{% endblock %}\n")
+
 var tagTests = []templateTest{
 	// cycle
 	templateTest{"{% for c in 'abcd' %}{% cycle 1 'a' var %}{% endfor %}", c{"var": 3.14}, "1a3.141"},
@@ -44,6 +46,10 @@ var tagTests = []templateTest{
 
 	// with
 	templateTest{"{% with %}{% set var 1 %}{{ var }}{% endwith %} {{ var }}", nil, "1 "},
+
+	// inheritance
+	templateTest{"{% extends parent %}{% override title %}child title{% endoverride %}{% endextends %}", c{"parent": parentTemplate}, "parent start child title\n"},
+	templateTest{"{% extends parent %}{% override title %}child title{% endoverride %}{% endextends %}", c{"parent": "testdata/parent"}, "parent start child title\n"},
 }
 
 func TestTags(t *testing.T) {

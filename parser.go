@@ -188,8 +188,24 @@ func Parse(s []byte) (*Template, os.Error) {
 	return t, nil
 }
 
+func MustParse(s []byte) *Template {
+	t, err := Parse(s)
+	if err != nil {
+		panic("template.MustParse error: " + err.String())
+	}
+	return t
+}
+
 func ParseString(s string) (*Template, os.Error) {
 	return Parse([]byte(s))
+}
+
+func MustParseString(s string) *Template {
+	t, err := ParseString(s)
+	if err != nil {
+		panic("template.MustParseString error: " + err.String())
+	}
+	return t
 }
 
 func ParseFile(name string) (*Template, os.Error) {
