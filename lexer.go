@@ -24,9 +24,26 @@ const (
 	TokVarStart // {{
 	TokVarEnd   // }}
 
-	TokDot      // .
-	TokFilter   // |
-	TokArgument // :
+	TokAdd // +
+	TokSub // -
+	TokMul // *
+	TokDiv // /
+	TokRem // %
+
+	TokAnd // and
+	TokOr  // or
+	TokNot // not
+
+	TokEqual     // ==
+	TokLess      // <
+	TokLessEq    // <=
+	TokGreater   // >
+	TokGreaterEq // >=
+	TokNotEq     // !=
+
+	TokDot   // .
+	TokBar   // |
+	TokColon // :
 )
 
 var tokStrings = map[Token]string{
@@ -42,8 +59,8 @@ var tokStrings = map[Token]string{
 	TokVarStart: "{{",
 	TokVarEnd:   "}}",
 	TokDot:      ".",
-	TokFilter:   "|",
-	TokArgument: ":",
+	TokBar:      "|",
+	TokColon:    ":",
 }
 
 func (t Token) String() string {
@@ -97,13 +114,13 @@ scanAgain:
 	case ch == '-', ch == '+':
 		tok = l.scanNumber()
 	case ch == '|':
-		tok = TokFilter
+		tok = TokBar
 		l.next()
 	case ch == '.':
 		tok = TokDot
 		l.next()
 	case ch == ':':
-		tok = TokArgument
+		tok = TokColon
 		l.next()
 	default:
 		l.next()

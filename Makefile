@@ -6,8 +6,8 @@ include $(GOROOT)/src/Make.inc
 
 TARG=github.com/edsrzf/template
 GOFILES=\
+	expr.go\
 	filter.go\
-	iftag.go\
 	lexer.go\
 	parser.go\
 	tag.go\

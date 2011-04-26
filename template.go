@@ -3,8 +3,6 @@ package template
 import (
 	"io"
 	"reflect"
-	"strconv"
-	"utf8"
 )
 
 type Context struct {
@@ -158,79 +156,6 @@ func (v varTag) Render(wr io.Writer, c *Context) { v.e.Eval(c).Render(wr, c) }
 type Template struct {
 	scope *scope
 	nodes NodeList
-}
-
-// Expr represents an expression that can be evaluated at runtime.
-type Expr interface {
-	Eval(c *Context) Value
-}
-
-type constExpr struct {
-	v Value
-}
-
-func (e constExpr) Eval(c *Context) Value { return e.v }
-
-// expr represents a Value with possible attributes and filters.
-// Attributes work like this:
-// For the expression "a.b"
-// - If a is a map[string]T, this is treated as a["b"]
-// - If a is a struct or pointer to a struct, this is treated as a.b
-// - If a is a map[numeric]T, slice, array, or pointer to an array, this is treated as a[b]
-// - If the above all fail, this is treated as a method call a.b()
-type expr struct {
-	v       Value
-	attrs   []string
-	filters []*filter
-}
-
-type attrExpr struct {
-	x     Expr
-	attrs []string
-}
-
-func (e *attrExpr) Eval(c *Context) Value {
-	val := e.x.Eval(c)
-	ref := val.Reflect()
-
-	// apply attributes
-	k := ref.Kind()
-	if reflect.Bool <= k && k <= reflect.Complex128 {
-		return val
-	} else if k == reflect.String {
-		if len(e.attrs) > 0 {
-			str := val.String()
-			idx, err := strconv.Atoi(e.attrs[0])
-			if err != nil {
-				return nilValue(0)
-			}
-			var n, i, c int
-			for i, c = range str {
-				if n == idx {
-					break
-				}
-				n++
-			}
-			return stringValue(str[i : i+utf8.RuneLen(c)])
-		} else {
-			return val
-		}
-	}
-	return getVal(ref, e.attrs)
-}
-
-type filterExpr struct {
-	x       Expr
-	filters []*filter
-}
-
-func (e *filterExpr) Eval(c *Context) Value {
-	val := e.x.Eval(c)
-	// apply filters
-	for _, f := range e.filters {
-		val = f.f(constExpr{val}, c, f.args)
-	}
-	return val
 }
 
 func (t *Template) Execute(wr io.Writer, vars map[string]interface{}) {

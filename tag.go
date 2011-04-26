@@ -209,6 +209,40 @@ func (f *forTag) Render(wr io.Writer, c *Context) {
 	}
 }
 
+type ifTag struct {
+	cond     Expr
+	ifNode   Node
+	elseNode Node
+}
+
+func parseIf(p *Parser) Node {
+	tag := new(ifTag)
+	tag.cond = p.ParseExpr()
+	p.Expect(TokTagEnd)
+	var tok string
+	tok, tag.ifNode = p.ParseUntil("elif", "else", "endif")
+	for tok != "endif" {
+		switch tok {
+		case "elif":
+			tag.elseNode = parseIf(p)
+			return tag
+		case "else":
+			tok, tag.elseNode = p.ParseUntil("endif")
+		default:
+			p.Error("unterminated if tag")
+		}
+	}
+	return tag
+}
+
+func (i *ifTag) Render(wr io.Writer, c *Context) {
+	if i.cond.Eval(c).Bool() {
+		i.ifNode.Render(wr, c)
+	} else if i.elseNode != nil {
+		i.elseNode.Render(wr, c)
+	}
+}
+
 type ifChangedTag struct {
 	vals      []Expr
 	last      []Variable

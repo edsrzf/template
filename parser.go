@@ -151,7 +151,7 @@ func (p *Parser) parseAttrs() []string {
 
 func (p *Parser) parseFilters() []*filter {
 	var f []*filter
-	for p.tok == TokFilter {
+	for p.tok == TokBar {
 		p.Next()
 		rf, ok := filters[string(p.lit)]
 		if !ok {
@@ -164,14 +164,14 @@ func (p *Parser) parseFilters() []*filter {
 		case ReqArg:
 			args = true
 		case OptArg:
-			args = p.tok == TokArgument
+			args = p.tok == TokColon
 		case NoArg:
-			if p.tok == TokArgument {
+			if p.tok == TokColon {
 				p.Error("filter accepts no arguments")
 			}
 		}
 		if args {
-			p.Expect(TokArgument)
+			p.Expect(TokColon)
 			val = p.ParseExpr()
 		}
 		f = append(f, &filter{rf.f, val})
