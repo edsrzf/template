@@ -149,11 +149,6 @@ func escapejsFilter(in Expr, c *Context, arg Expr) Value {
 	return in.Eval(c)
 }
 
-func filesizeformatFilter(in Expr, c *Context, arg Expr) Value {
-	// TODO: Implement
-	return in.Eval(c)
-}
-
 // Works on slices or arrays
 func firstFilter(in Expr, c *Context, arg Expr) Value {
 	inVal := in.Eval(c)
@@ -169,25 +164,9 @@ func firstFilter(in Expr, c *Context, arg Expr) Value {
 	return inVal
 }
 
-func fixAmpersandsFilter(in Expr, c *Context, arg Expr) Value {
-	str := in.Eval(c).String()
-	return stringValue(strings.Replace(str, "&", "&amp;", -1))
-}
-
 func floatformatFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
 	return in.Eval(c)
-}
-
-func forceEscapeFilter(in Expr, c *Context, arg Expr) Value {
-	str := in.Eval(c).String()
-	// TODO: We can probably get better performance by implementing this ourselves
-	str = strings.Replace(str, "&", "&amp;", -1)
-	str = strings.Replace(str, "<", "&lt;", -1)
-	str = strings.Replace(str, ">", "&gt;", -1)
-	str = strings.Replace(str, "'", "&#39;", -1)
-	str = strings.Replace(str, "\"", "&quot;", -1)
-	return stringValue(str)
 }
 
 func getDigitFilter(in Expr, c *Context, arg Expr) Value {
@@ -228,11 +207,6 @@ func lengthFilter(in Expr, c *Context, arg Expr) Value {
 		return intValue(v.Len())
 	}
 	return inVal
-}
-
-func lengthIsFilter(in Expr, c *Context, arg Expr) Value {
-	l := lengthFilter(in, c, nil).Int()
-	return boolValue(l == arg.Eval(c).Int())
 }
 
 func linebreaksFilter(in Expr, c *Context, arg Expr) Value {
@@ -279,11 +253,6 @@ func makeListFilter(in Expr, c *Context, arg Expr) Value {
 	return in.Eval(c)
 }
 
-func phone2numericFilter(in Expr, c *Context, arg Expr) Value {
-	// TODO: Implement
-	return in.Eval(c)
-}
-
 func pluralizeFilter(in Expr, c *Context, arg Expr) Value {
 	var single string
 	var plural string
@@ -304,11 +273,6 @@ func pluralizeFilter(in Expr, c *Context, arg Expr) Value {
 		return stringValue(plural)
 	}
 	return stringValue(single)
-}
-
-func pprintFilter(in Expr, c *Context, arg Expr) Value {
-	// TODO: Implement
-	return in.Eval(c)
 }
 
 func randomFilter(in Expr, c *Context, arg Expr) Value {
