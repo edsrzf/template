@@ -1,3 +1,2 @@
 - Better error handling: don't panic, show line and column for parse errors
 - Better parser interface so that external packages can implement tags
-- Figure out how inheritance is going to work
