@@ -78,7 +78,7 @@ func (t cycleTag) Render(wr io.Writer, c *Context) {
 
 type extendsTag struct {
 	parent Expr
-	nodes NodeList
+	nodes  NodeList
 }
 
 func parseExtends(p *Parser) Node {
@@ -288,9 +288,9 @@ type setTag struct {
 }
 
 type overrideTag struct {
-	name  string
+	name    string
 	nameVar Variable
-	nodes NodeList
+	nodes   NodeList
 }
 
 func parseOverride(p *Parser) Node {

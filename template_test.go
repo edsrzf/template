@@ -32,6 +32,7 @@ var templateTests = []templateTest{
 	{"{{ var }}", c{"var": "hello"}, "hello"},
 	{" {{ var }}", c{"var": []int{1, 2, 3}}, " [1, 2, 3]"},
 	{"{{ var }}", c{"var": map[int]string{1: "one"}}, "{1: 'one'}"},
+	{"{{ var }}", c{"var": 2 + 2i}, "2+2i"},
 	{"{{ 'hello'.1 }}", nil, "e"},
 	{"{{ var.1 }}", c{"var": "hello"}, "e"},
 	{"{{ var.0 }}", c{"var": []int{14}}, "14"},

@@ -69,24 +69,28 @@ func (n nilValue) Render(wr io.Writer, c *Context) {}
 type boolValue bool
 
 func (b boolValue) Bool() bool { return bool(b) }
+
 func (b boolValue) Int() int64 {
 	if b {
 		return 1
 	}
 	return 0
 }
+
 func (b boolValue) String() string {
 	if b {
 		return "true"
 	}
 	return "false"
 }
+
 func (b boolValue) Uint() uint64 {
 	if b {
 		return 1
 	}
 	return 0
 }
+
 func (b boolValue) Reflect() reflect.Value          { return reflect.ValueOf(b) }
 func (b boolValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(b.String())) }
 
@@ -110,21 +114,17 @@ func (str stringValue) Uint() uint64 {
 	return 0
 }
 
-func (str stringValue) Reflect() reflect.Value { return reflect.ValueOf(str) }
-
+func (str stringValue) Reflect() reflect.Value          { return reflect.ValueOf(str) }
 func (str stringValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(string(str))) }
 
 type intValue int64
 
-func (i intValue) Bool() bool             { return i != 0 }
-func (i intValue) Int() int64             { return int64(i) }
-func (i intValue) String() string         { return strconv.Itoa64(int64(i)) }
-func (i intValue) Uint() uint64           { return uint64(i) }
-func (i intValue) Reflect() reflect.Value { return reflect.ValueOf(i) }
-
-func (i intValue) Render(wr io.Writer, c *Context) {
-	wr.Write([]byte(i.String()))
-}
+func (i intValue) Bool() bool                      { return i != 0 }
+func (i intValue) Int() int64                      { return int64(i) }
+func (i intValue) String() string                  { return strconv.Itoa64(int64(i)) }
+func (i intValue) Uint() uint64                    { return uint64(i) }
+func (i intValue) Reflect() reflect.Value          { return reflect.ValueOf(i) }
+func (i intValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(i.String())) }
 
 type floatValue float64
 
@@ -134,25 +134,24 @@ func (f floatValue) String() string         { return strconv.Ftoa64(float64(f), 
 func (f floatValue) Uint() uint64           { return uint64(f) }
 func (f floatValue) Reflect() reflect.Value { return reflect.ValueOf(f) }
 
-func (f floatValue) Render(wr io.Writer, c *Context) {
-	wr.Write([]byte(f.String()))
-}
+func (f floatValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(f.String())) }
 
-/*
-TODO: uncomment this when issue 1716 is fixed
 type complexValue complex128
 
 func (c complexValue) Bool() bool { return c != 0 }
-func (c complexValue) Int() bool { return 0 }
-// TODO: implement
-func (c complexValue) String() bool { return "" }
-func (c complexValue) Uint() bool { return 0 }
-func (c complexValue) Reflect() reflect.Value { return reflect.NewValue(c) }
+func (c complexValue) Int() int64 { return 0 }
 
-func (c complexValue) Render(wr io.Writer, c *Context) {
-	wr.Write([]byte(c.String(c)))
+func (c complexValue) String() string {
+	a, b := real(c), imag(c)
+	return strconv.Ftoa64(a, 'g', -1) + "+" + strconv.Ftoa64(b, 'g', -1) + "i"
 }
-*/
+
+func (c complexValue) Uint() uint64           { return 0 }
+func (c complexValue) Reflect() reflect.Value { return reflect.ValueOf(c) }
+
+func (c complexValue) Render(wr io.Writer, _ *Context) {
+	wr.Write([]byte(c.String()))
+}
 
 // reflectValue implements the common Value methods for reflected types.
 type reflectValue reflect.Value
@@ -277,9 +276,8 @@ func refToVal(ref reflect.Value) Value {
 		return intValue(ref.Uint())
 	case reflect.Float32, reflect.Float64:
 		return floatValue(ref.Float())
-	// TODO: uncomment this when issue 1716 is fixed
-	//case reflect.Complex64, reflect.Complex128:
-	//return complexValue(ref.Complex())
+	case reflect.Complex64, reflect.Complex128:
+		return complexValue(ref.Complex())
 	case reflect.Array, reflect.Slice:
 		return arrayValue{reflectValue(ref)}
 	case reflect.Chan:
