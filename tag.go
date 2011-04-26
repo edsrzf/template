@@ -34,7 +34,7 @@ func parseBlock(p *Parser) Node {
 	if tok != "endblock" {
 		p.Error("unterminated block tag")
 	}
-	nameVar := p.s.Lookup("@" + name)
+	nameVar := p.Scope().Lookup("@" + name)
 	return &blockTag{nameVar, nodes}
 }
 
@@ -61,7 +61,7 @@ func parseCycle(p *Parser) Node {
 	if len(args) < 1 {
 		p.Error("the cycle tag requires at least one parameter")
 	}
-	state := p.s.Anonymous(intValue(0))
+	state := p.Scope().Anonymous(intValue(0))
 	return &cycleTag{args, state}
 }
 
@@ -140,9 +140,10 @@ type forTag struct {
 }
 
 func parseFor(p *Parser) Node {
-	p.s.Push()
+	scope := p.Scope()
+	scope.Push()
 	name := p.Expect(TokIdent)
-	v := p.s.Insert(name)
+	v := scope.Insert(name)
 	p.ExpectWord("in")
 	collection := p.ParseExpr()
 	p.Expect(TokTagEnd)
@@ -155,7 +156,7 @@ func parseFor(p *Parser) Node {
 	if tok != "endfor" {
 		p.Error("unterminated for tag")
 	}
-	return &forTag{v, collection, p.s.Pop(), body, elseNode}
+	return &forTag{v, collection, scope.Pop(), body, elseNode}
 }
 
 // TODO: this needs reworking. We need a good way to set Variables on the stack.
@@ -225,7 +226,7 @@ func parseIfChanged(p *Parser) Node {
 	for i := range vars {
 		// use a value that can never otherwise occur so we always detect a
 		// change the first time
-		vars[i] = p.s.Anonymous(nilValue(1))
+		vars[i] = p.Scope().Anonymous(nilValue(1))
 	}
 	tok, ifNodes := p.ParseUntil("else", "endifchanged")
 	var elseNodes NodeList
@@ -275,7 +276,7 @@ func parseOverride(p *Parser) Node {
 		p.Error("unterminated block tag")
 	}
 	name = "@" + name
-	nameVar := p.s.Lookup(name)
+	nameVar := p.Scope().Lookup(name)
 	return &overrideTag{name, nameVar, nodes}
 }
 
@@ -289,7 +290,7 @@ func (o *overrideTag) Render(wr io.Writer, c *Context) {
 
 func parseSet(p *Parser) Node {
 	name := p.Expect(TokIdent)
-	v := p.s.Insert(name)
+	v := p.Scope().Insert(name)
 	e := p.ParseExpr()
 	return &setTag{v, e}
 }
@@ -301,13 +302,14 @@ func (t *setTag) Render(wr io.Writer, c *Context) {
 type with NodeList
 
 func parseWith(p *Parser) Node {
-	p.s.Push()
+	scope := p.Scope()
+	scope.Push()
 	p.Expect(TokTagEnd)
 	tok, nodes := p.ParseUntil("endwith")
 	if tok != "endwith" {
 		p.Error("unterminated with tag")
 	}
-	init := p.s.Pop()
+	init := scope.Pop()
 	nodes = append(nodes, nil)
 	copy(nodes[1:], nodes)
 	nodes[0] = init

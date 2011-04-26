@@ -18,6 +18,10 @@ func (p *Parser) Error(format string, args ...interface{}) {
 	panic(fmt.Sprintf(format, args...))
 }
 
+func (p *Parser) Scope() *scope {
+	return p.s
+}
+
 func (p *Parser) Current() Token {
 	return p.tok
 }
