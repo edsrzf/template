@@ -17,6 +17,7 @@ var tags = map[string]TagFunc{
 	"for":       parseFor,
 	"if":        parseIf,
 	"ifchanged": parseIfChanged,
+	"include":   parseInclude,
 	"override":  parseOverride,
 	"set":       parseSet,
 	"with":      parseWith,
@@ -255,6 +256,30 @@ func (t *ifChangedTag) Render(wr io.Writer, c *Context) {
 	} else if t.elseNodes != nil {
 		t.elseNodes.Render(wr, c)
 	}
+}
+
+type includeTag struct {
+	e Expr
+}
+
+func parseInclude(p *Parser) Node {
+	expr := p.ParseExpr()
+	return includeTag{expr}
+}
+
+func (i includeTag) Render(wr io.Writer, c *Context) {
+	val := i.e.Eval(c)
+	node, ok := val.Reflect().Interface().(*Template)
+	if !ok {
+		// must be a string
+		filename := val.String()
+		var err os.Error
+		node, err = ParseFile(filename)
+		if err != nil {
+			return
+		}
+	}
+	node.Render(wr, c)
 }
 
 type setTag struct {

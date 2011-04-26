@@ -5,6 +5,7 @@ import (
 )
 
 var parentTemplate = MustParseString("parent start {% block title %}parent title{% endblock %}\n")
+var varTemplate = MustParseString("{{ var }}")
 
 var tagTests = []templateTest{
 	// cycle
@@ -38,6 +39,10 @@ var tagTests = []templateTest{
 	templateTest{"{% for n in '122344' %}{% ifchanged n %}c{% endifchanged %}{% endfor %}", nil, "cccc"},
 	templateTest{"{% for n in '122344' %}{% ifchanged n %}c{% else %}s{% endifchanged %}{% endfor %}", nil, "ccsccs"},
 	templateTest{"{% ifchanged var %}c{% endifchanged %}", nil, "c"},
+
+	// include
+	templateTest{"{% include t %}", c{"t": parentTemplate}, "parent start parent title\n"},
+	templateTest{"{% include t %}", c{"t": varTemplate, "var": "hello"}, "hello"},
 
 	// set
 	templateTest{"{% set var1 1 %}{% set var2 'hi' %}{% set var3 3.14 %}{{ var1 }} {{ var2 }} {{ var3 }}", nil, "1 hi 3.14"},
