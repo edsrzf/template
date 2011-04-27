@@ -47,24 +47,54 @@ const (
 )
 
 var tokStrings = map[Token]string{
-	TokIllegal:  "illegal",
-	TokEof:      "eof",
-	TokIdent:    "ident",
-	TokInt:      "int",
-	TokFloat:    "float",
-	TokString:   "string",
-	TokText:     "text",
-	TokTagStart: "{%",
-	TokTagEnd:   "%}",
-	TokVarStart: "{{",
-	TokVarEnd:   "}}",
-	TokDot:      ".",
-	TokBar:      "|",
-	TokColon:    ":",
+	TokIllegal:   "illegal",
+	TokEof:       "eof",
+	TokIdent:     "ident",
+	TokInt:       "int",
+	TokFloat:     "float",
+	TokString:    "string",
+	TokText:      "text",
+	TokTagStart:  "{%",
+	TokTagEnd:    "%}",
+	TokVarStart:  "{{",
+	TokVarEnd:    "}}",
+	TokAdd:       "+",
+	TokSub:       "-",
+	TokMul:       "*",
+	TokDiv:       "/",
+	TokRem:       "%",
+	TokAnd:       "and",
+	TokOr:        "or",
+	TokNot:       "not",
+	TokEqual:     "==",
+	TokLess:      "<",
+	TokLessEq:    "<=",
+	TokGreater:   ">",
+	TokGreaterEq: ">=",
+	TokNotEq:     "!=",
+	TokDot:       ".",
+	TokBar:       "|",
+	TokColon:     ":",
 }
 
 func (t Token) String() string {
 	return tokStrings[t]
+}
+
+func (t Token) Precedence() int {
+	switch t {
+	case TokOr:
+		return 1
+	case TokAnd:
+		return 2
+	case TokEqual, TokNotEq, TokLess, TokLessEq, TokGreater, TokGreaterEq:
+		return 3
+	case TokAdd, TokSub:
+		return 4
+	case TokMul, TokDiv, TokRem:
+		return 5
+	}
+	return 0
 }
 
 type lexer struct {
@@ -108,10 +138,8 @@ scanAgain:
 
 	switch ch := l.ch; {
 	case unicode.IsLetter(ch), l.ch == '_':
-		tok = l.scanIdent()
+		return l.scanIdent()
 	case unicode.IsDigit(ch):
-		tok = l.scanNumber()
-	case ch == '-', ch == '+':
 		tok = l.scanNumber()
 	case ch == '|':
 		tok = TokBar
@@ -122,6 +150,18 @@ scanAgain:
 	case ch == ':':
 		tok = TokColon
 		l.next()
+	case ch == '+':
+		tok = TokAdd
+		l.next()
+	case ch == '-':
+		tok = TokSub
+		l.next()
+	case ch == '*':
+		tok = TokMul
+		l.next()
+	case ch == '/':
+		tok = TokDiv
+		l.next()
 	default:
 		l.next()
 		switch ch {
@@ -131,8 +171,10 @@ scanAgain:
 			switch l.ch {
 			case '%':
 				tok = TokTagStart
+				l.next()
 			case '{':
 				tok = TokVarStart
+				l.next()
 			case '#':
 				// start of a comment; scan until the end
 				l.next()
@@ -147,28 +189,46 @@ scanAgain:
 					}
 				}
 				goto scanAgain
-				return l.scan()
 			}
 		case '%':
-			if l.ch != '}' {
-				goto illegal
+			tok = TokRem
+			if l.ch == '}' {
+				l.insideTag = false
+				tok = TokTagEnd
+				l.next()
 			}
-			l.insideTag = false
-			tok = TokTagEnd
 		case '}':
-			if l.ch != '}' {
-				goto illegal
+			if l.ch == '}' {
+				l.insideTag = false
+				tok = TokVarEnd
+				l.next()
 			}
-			l.insideTag = false
-			tok = TokVarEnd
 		case '\'', '"':
 			tok = l.scanString(byte(ch))
 			return tok, l.src[pos+1 : l.offset-1]
-		default:
-		illegal:
-			panic("illegal character")
+		case '<':
+			tok = TokLess
+			if l.ch == '=' {
+				tok = TokLessEq
+				l.next()
+			}
+		case '>':
+			tok = TokGreater
+			if l.ch == '=' {
+				tok = TokGreaterEq
+				l.next()
+			}
+		case '=':
+			if l.ch == '=' {
+				tok = TokEqual
+				l.next()
+			}
+		case '!':
+			if l.ch == '=' {
+				tok = TokNotEq
+				l.next()
+			}
 		}
-		l.next()
 	}
 	return tok, l.src[pos:l.offset]
 }
@@ -215,11 +275,22 @@ consume:
 	return lit
 }
 
-func (l *lexer) scanIdent() Token {
+func (l *lexer) scanIdent() (Token, []byte) {
+	pos := l.offset
 	for unicode.IsLetter(l.ch) || unicode.IsDigit(l.ch) || l.ch == '_' {
 		l.next()
 	}
-	return TokIdent
+	lit := l.src[pos:l.offset]
+	tok := TokIdent
+	switch string(lit) {
+	case "and":
+		tok = TokAnd
+	case "or":
+		tok = TokOr
+	case "not":
+		tok = TokNot
+	}
+	return tok, lit
 }
 
 func (l *lexer) scanNumber() Token {

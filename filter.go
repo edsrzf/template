@@ -28,7 +28,6 @@ type regFilter struct {
 }
 
 var filters = map[string]*regFilter{
-	"add":            &regFilter{addFilter, ReqArg},
 	"addslashes":     &regFilter{addslashesFilter, NoArg},
 	"capfirst":       &regFilter{capfirstFilter, NoArg},
 	"center":         &regFilter{centerFilter, ReqArg},
@@ -38,12 +37,6 @@ var filters = map[string]*regFilter{
 	"escape":         &regFilter{escapeFilter, NoArg},
 	"first":          &regFilter{firstFilter, NoArg},
 	"lower":          &regFilter{lowerFilter, NoArg},
-}
-
-func addFilter(in Expr, c *Context, arg Expr) Value {
-	l := in.Eval(c).Int()
-	r := arg.Eval(c).Int()
-	return intValue(l + r)
 }
 
 func addslashesFilter(in Expr, c *Context, arg Expr) Value {
@@ -123,11 +116,6 @@ func dictsortFilter(in Expr, c *Context, arg Expr) Value {
 
 // Instead of taking a list of dictionaries, it takes a slice of maps
 func dictsortreversedFilter(in Expr, c *Context, arg Expr) Value {
-	// TODO: Implement
-	return in.Eval(c)
-}
-
-func divisiblebyFilter(in Expr, c *Context, arg Expr) Value {
 	// TODO: Implement
 	return in.Eval(c)
 }

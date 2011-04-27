@@ -42,6 +42,39 @@ var templateTests = []templateTest{
 	{"{{ var.42 }}", c{"var": map[int16]int16{42: 67}}, "67"},
 	{"{{ var.a }}", c{"var": testStruct{4, 3.14}}, "4"},
 	{"{{ var.b }}", c{"var": &testStruct{4, 3.14}}, "3.14"},
+
+	// unary expressions
+	{"{{ +1 }}", nil, "1"},
+	{"{{ -1 }}", nil, "-1"},
+	{"{{ not 1 }}", nil, "false"},
+	{"{{ not 0 }}", nil, "true"},
+
+	// binary expressions
+	{"{{ 1+1 }}", nil, "2"},
+	{"{{ 2 - 1 }}", nil, "1"},
+	{"{{ 4*4 }}", nil, "16"},
+	{"{{ 12/3 }}", nil, "4"},
+	{"{{ 12/0 }}", nil, "NaN"},
+	{"{{ 10%9 }}", nil, "1"},
+	{"{{ 10%10 }}", nil, "0"},
+
+	// comparisons
+	{"{{ 142 == 43 }}", nil, "false"},
+	{"{{ 142 == 142 }}", nil, "true"},
+	{"{{ 142 != 43 }}", nil, "true"},
+	{"{{ 142 != 142 }}", nil, "false"},
+	{"{{ 142 > 43 }}", nil, "true"},
+	{"{{ 10 > 10 }}", nil, "false"},
+	{"{{ 42 > 43 }}", nil, "false"},
+	{"{{ 142 >= 43 }}", nil, "true"},
+	{"{{ 10 >= 10 }}", nil, "true"},
+	{"{{ 42 >= 43 }}", nil, "false"},
+	{"{{ 142 < 43 }}", nil, "false"},
+	{"{{ 10 < 10 }}", nil, "false"},
+	{"{{ 42 < 43 }}", nil, "true"},
+	{"{{ 142 <= 43 }}", nil, "false"},
+	{"{{ 10 <= 10 }}", nil, "true"},
+	{"{{ 42 <= 43 }}", nil, "true"},
 }
 
 func testTemplates(t *testing.T, templates []templateTest) {

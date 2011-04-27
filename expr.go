@@ -18,8 +18,8 @@ type constExpr struct {
 func (e constExpr) Eval(c *Context) Value { return e.v }
 
 type attrExpr struct {
-	x     Expr
-	attrs []string
+	x    Expr
+	attr string
 }
 
 func (e *attrExpr) Eval(c *Context) Value {
@@ -29,27 +29,30 @@ func (e *attrExpr) Eval(c *Context) Value {
 	// apply attributes
 	k := ref.Kind()
 	if reflect.Bool <= k && k <= reflect.Complex128 {
+		// invalid; do nothing
 		return val
 	} else if k == reflect.String {
-		if len(e.attrs) > 0 {
-			str := val.String()
-			idx, err := strconv.Atoi(e.attrs[0])
-			if err != nil {
-				return nilValue(0)
-			}
-			var n, i, c int
-			for i, c = range str {
-				if n == idx {
-					break
-				}
-				n++
-			}
-			return stringValue(str[i : i+utf8.RuneLen(c)])
-		} else {
+		str := val.String()
+		idx, err := strconv.Atoi(e.attr)
+		if err != nil {
+			// invalid; do nothing
 			return val
 		}
+		var n, i, c int
+		for i, c = range str {
+			if n == idx {
+				break
+			}
+			n++
+		}
+		return stringValue(str[i : i+utf8.RuneLen(c)])
 	}
-	return getVal(ref, e.attrs)
+
+	ref = lookup(ref, e.attr)
+	if ref.Kind() == reflect.Invalid {
+		return nilValue(0)
+	}
+	return refToVal(ref)
 }
 
 type filterExpr struct {
@@ -66,48 +69,66 @@ func (e *filterExpr) Eval(c *Context) Value {
 	return val
 }
 
-type equalExpr struct {
+type unaryExpr struct {
+	op Token
+	x  Expr
+}
+
+func (u *unaryExpr) Eval(c *Context) Value {
+	val := u.x.Eval(c)
+	switch u.op {
+	case TokAdd:
+		return val
+	case TokSub:
+		return intValue(-val.Int())
+	case TokNot:
+		return boolValue(!val.Bool())
+	}
+	panic("unreachable")
+}
+
+type binaryExpr struct {
+	op          Token
 	left, right Expr
 }
 
-func (e *equalExpr) Eval(c *Context) bool {
-	// TODO: Make sure types are comparable
-	l := e.left.Eval(c)
-	r := e.right.Eval(c)
-	return l == r
-}
-
-type nequalExpr struct {
-	left, right Expr
-}
-
-func (n *nequalExpr) Eval(c *Context) bool {
-	// TODO: Make sure types are comparable
-	l := n.left.Eval(c)
-	r := n.right.Eval(c)
-	return l != r
-}
-
-type notExpr struct {
-	x Expr
-}
-
-func (n *notExpr) Eval(c *Context) bool {
-	return !n.x.Eval(c).Bool()
-}
-
-type andExpr struct {
-	left, right Expr
-}
-
-func (a *andExpr) Eval(c *Context) bool {
-	return a.left.Eval(c).Bool() && a.right.Eval(c).Bool()
-}
-
-type orExpr struct {
-	left, right Expr
-}
-
-func (o *orExpr) Eval(c *Context) bool {
-	return o.left.Eval(c).Bool() || o.right.Eval(c).Bool()
+func (b *binaryExpr) Eval(c *Context) Value {
+	l := b.left.Eval(c)
+	r := b.right.Eval(c)
+	switch b.op {
+	case TokAdd:
+		// TODO: Floats will be truncated; other results might be unexpected
+		return intValue(l.Int() + r.Int())
+	case TokSub:
+		return intValue(l.Int() - r.Int())
+	case TokMul:
+		return intValue(l.Int() * r.Int())
+	case TokDiv:
+		divisor := r.Int()
+		if divisor == 0 {
+			return stringValue("NaN")
+		}
+		return intValue(l.Int() / divisor)
+	case TokRem:
+		return intValue(l.Int() % r.Int())
+	case TokAnd:
+		return boolValue(l.Bool() && r.Bool())
+	case TokOr:
+		return boolValue(l.Bool() || r.Bool())
+	case TokEqual:
+		// TODO: Make sure types are comparable
+		return boolValue(l == r)
+	case TokNotEq:
+		// TODO: Make sure types are comparable
+		return boolValue(l != r)
+	case TokLess:
+		return boolValue(l.Int() < r.Int())
+	case TokLessEq:
+		return boolValue(l.Int() <= r.Int())
+	case TokGreater:
+		return boolValue(l.Int() > r.Int())
+	case TokGreaterEq:
+		return boolValue(l.Int() >= r.Int())
+	}
+	panic("unreachable")
 }

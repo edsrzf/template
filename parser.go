@@ -91,19 +91,14 @@ func (p *Parser) parseVarTag() Node {
 }
 
 func (p *Parser) ParseExpr() Expr {
-	e := p.parseVal()
-	a := p.parseAttrs()
-	if len(a) > 0 {
-		e = &attrExpr{e, a}
-	}
-	f := p.parseFilters()
-	if len(f) > 0 {
+	e := p.parseBinaryExpr(1)
+	if f := p.parseFilters(); len(f) > 0 {
 		e = &filterExpr{e, f}
 	}
 	return e
 }
 
-func (p *Parser) parseVal() Expr {
+func (p *Parser) parseOperand() Expr {
 	var ret Expr
 	switch p.tok {
 	case TokInt:
@@ -116,7 +111,7 @@ func (p *Parser) parseVal() Expr {
 	case TokFloat:
 		f, err := strconv.Atof64(string(p.lit))
 		if err != nil {
-			p.Error("Internal float error: %s", err)
+			p.Error("internal float error: %s", err)
 		}
 		ret = constExpr{floatValue(f)}
 		p.Next()
@@ -126,27 +121,58 @@ func (p *Parser) parseVal() Expr {
 	case TokIdent:
 		ret = p.parseVar()
 	default:
-		p.Error("Unexpected Token %s", p.tok)
+		p.Error("unexpected Token %s", p.tok)
 	}
 	return ret
 }
 
-func (p *Parser) parseVar() Variable {
-	return p.s.Lookup(p.Expect(TokIdent))
-}
-
-func (p *Parser) parseAttrs() []string {
-	var attrs []string
-	for p.tok == TokDot {
-		p.Expect(TokDot)
-		attrs = append(attrs, string(p.lit))
-		if p.tok == TokInt {
+func (p *Parser) parsePrimaryExpr() Expr {
+	x := p.parseOperand()
+L:
+	for {
+		switch p.tok {
+		case TokDot:
 			p.Next()
-		} else {
-			p.Expect(TokIdent)
+			attr := string(p.lit)
+			if p.tok == TokInt {
+				p.Next()
+			} else {
+				p.Expect(TokIdent)
+			}
+			x = &attrExpr{x, attr}
+		default:
+			break L
 		}
 	}
-	return attrs
+	return x
+}
+
+func (p *Parser) parseUnaryExpr() Expr {
+	switch p.tok {
+	case TokAdd, TokSub, TokNot:
+		op := p.tok
+		p.Next()
+		x := p.parseUnaryExpr()
+		return &unaryExpr{op, x}
+	}
+	return p.parsePrimaryExpr()
+}
+
+func (p *Parser) parseBinaryExpr(prec1 int) Expr {
+	x := p.parseUnaryExpr()
+	for prec := p.tok.Precedence(); prec >= prec1; prec-- {
+		for p.tok.Precedence() == prec {
+			op := p.tok
+			p.Next()
+			y := p.parseBinaryExpr(prec + 1)
+			x = &binaryExpr{op, x, y}
+		}
+	}
+	return x
+}
+
+func (p *Parser) parseVar() Variable {
+	return p.s.Lookup(p.Expect(TokIdent))
 }
 
 func (p *Parser) parseFilters() []*filter {

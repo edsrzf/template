@@ -255,16 +255,6 @@ func (v Variable) Eval(c *Context) Value {
 
 func (v Variable) Set(val Value, c *Context) { c.stack[v] = val }
 
-func getVal(ref reflect.Value, specs []string) Value {
-	for _, s := range specs {
-		ref = lookup(ref, s)
-		if ref.Kind() == reflect.Invalid {
-			return nilValue(0)
-		}
-	}
-	return refToVal(ref)
-}
-
 func refToVal(ref reflect.Value) Value {
 	switch ref.Kind() {
 	case reflect.Bool:

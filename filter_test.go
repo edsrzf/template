@@ -5,16 +5,6 @@ import (
 )
 
 var filterTests = []templateTest{
-	// Test add
-	{"{{ 14|add:1 }}", c{"var": 14}, "15"},
-	{"{{ var|add:1 }}", c{"var": 14}, "15"},
-	{"{{ var|add:-1 }}", c{"var": 14}, "13"},
-	{"{{ var|add:\"1\" }}", c{"var": 14}, "15"},
-	{"{{ var|add:'-1' }}", c{"var": 14}, "13"},
-	{"{{ var|add:1 }}", c{"var": "14"}, "15"},
-	{"{{ var|add:1 }}", nil, "1"},
-	{"{{ var|add:1 }}", c{"var": "a"}, "1"},
-
 	// Test addslashes
 	{"{{ var|addslashes }}", c{"var": "I'm using Django"}, "I\\'m using Django"},
 
