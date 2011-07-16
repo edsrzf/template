@@ -92,7 +92,7 @@ func (b boolValue) Uint() uint64 {
 }
 
 func (b boolValue) Reflect() reflect.Value          { return reflect.ValueOf(b) }
-func (b boolValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(b.String())) }
+func (b boolValue) Render(w io.Writer, c *Context) { io.WriteString(w, b.String()) }
 
 type stringValue string
 
@@ -115,7 +115,7 @@ func (str stringValue) Uint() uint64 {
 }
 
 func (str stringValue) Reflect() reflect.Value          { return reflect.ValueOf(str) }
-func (str stringValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(string(str))) }
+func (str stringValue) Render(w io.Writer, c *Context) { io.WriteString(w, string(str)) }
 
 type intValue int64
 
@@ -124,7 +124,7 @@ func (i intValue) Int() int64                      { return int64(i) }
 func (i intValue) String() string                  { return strconv.Itoa64(int64(i)) }
 func (i intValue) Uint() uint64                    { return uint64(i) }
 func (i intValue) Reflect() reflect.Value          { return reflect.ValueOf(i) }
-func (i intValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(i.String())) }
+func (i intValue) Render(w io.Writer, c *Context) { io.WriteString(w, i.String()) }
 
 type floatValue float64
 
@@ -134,7 +134,7 @@ func (f floatValue) String() string         { return strconv.Ftoa64(float64(f), 
 func (f floatValue) Uint() uint64           { return uint64(f) }
 func (f floatValue) Reflect() reflect.Value { return reflect.ValueOf(f) }
 
-func (f floatValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(f.String())) }
+func (f floatValue) Render(w io.Writer, c *Context) { io.WriteString(w, f.String()) }
 
 type complexValue complex128
 
@@ -149,8 +149,8 @@ func (c complexValue) String() string {
 func (c complexValue) Uint() uint64           { return 0 }
 func (c complexValue) Reflect() reflect.Value { return reflect.ValueOf(c) }
 
-func (c complexValue) Render(wr io.Writer, _ *Context) {
-	wr.Write([]byte(c.String()))
+func (c complexValue) Render(w io.Writer, _ *Context) {
+	io.WriteString(w, c.String())
 }
 
 // reflectValue implements the common Value methods for reflected types.
@@ -179,7 +179,7 @@ func (a arrayValue) String() string {
 	str += "]"
 	return str
 }
-func (a arrayValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(a.String())) }
+func (a arrayValue) Render(w io.Writer, c *Context) { io.WriteString(w, a.String()) }
 
 type mapValue struct {
 	reflectValue
@@ -204,7 +204,7 @@ func (m mapValue) String() string {
 	str += "}"
 	return str
 }
-func (m mapValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(m.String())) }
+func (m mapValue) Render(w io.Writer, c *Context) { io.WriteString(w, m.String()) }
 
 type chanValue struct {
 	reflectValue
@@ -214,7 +214,7 @@ func (ch chanValue) String() string {
 	// TODO: implement
 	return ""
 }
-func (ch chanValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(ch.String())) }
+func (ch chanValue) Render(w io.Writer, c *Context) { io.WriteString(w, ch.String()) }
 
 type structValue struct {
 	reflectValue
@@ -225,7 +225,7 @@ func (st structValue) String() string {
 	// TODO: implement
 	return ""
 }
-func (st structValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(st.String())) }
+func (st structValue) Render(w io.Writer, c *Context) { io.WriteString(w, st.String()) }
 
 type pointerValue struct {
 	reflectValue
@@ -240,7 +240,7 @@ func (p pointerValue) String() string {
 	}
 	return p.value().String()
 }
-func (p pointerValue) Render(wr io.Writer, c *Context) { wr.Write([]byte(p.String())) }
+func (p pointerValue) Render(w io.Writer, c *Context) { io.WriteString(w, p.String()) }
 
 // A Variable is an index into a Context's stack.
 // Variables must be obtained through the Parser before runtime.
