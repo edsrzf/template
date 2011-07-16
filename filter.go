@@ -248,7 +248,7 @@ func pluralizeFilter(in Expr, c *Context, arg Expr) Value {
 	if suffix == "" {
 		plural = "s"
 	} else {
-		args := strings.Split(suffix, ",", 2)
+		args := strings.SplitN(suffix, ",", 2)
 		if len(args) == 1 {
 			plural = args[0]
 		} else {
