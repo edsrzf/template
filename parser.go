@@ -3,7 +3,6 @@ package template
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strconv"
 )
 
@@ -102,14 +101,14 @@ func (p *Parser) parseOperand() Expr {
 	var ret Expr
 	switch p.tok {
 	case TokInt:
-		i, err := strconv.Atoi64(string(p.lit))
+		i, err := strconv.ParseInt(string(p.lit), 10, 64)
 		if err != nil {
 			p.Error("internal int error: %s", err)
 		}
 		ret = constExpr{intValue(i)}
 		p.Next()
 	case TokFloat:
-		f, err := strconv.Atof64(string(p.lit))
+		f, err := strconv.ParseFloat(string(p.lit), 64)
 		if err != nil {
 			p.Error("internal float error: %s", err)
 		}
@@ -205,7 +204,7 @@ func (p *Parser) parseFilters() []*filter {
 	return f
 }
 
-func Parse(s []byte) (*Template, os.Error) {
+func Parse(s []byte) (*Template, error) {
 	t := new(Template)
 	l := &lexer{src: s}
 	l.init()
@@ -221,24 +220,24 @@ func Parse(s []byte) (*Template, os.Error) {
 func MustParse(s []byte) *Template {
 	t, err := Parse(s)
 	if err != nil {
-		panic("template.MustParse error: " + err.String())
+		panic("template.MustParse error: " + err.Error())
 	}
 	return t
 }
 
-func ParseString(s string) (*Template, os.Error) {
+func ParseString(s string) (*Template, error) {
 	return Parse([]byte(s))
 }
 
 func MustParseString(s string) *Template {
 	t, err := ParseString(s)
 	if err != nil {
-		panic("template.MustParseString error: " + err.String())
+		panic("template.MustParseString error: " + err.Error())
 	}
 	return t
 }
 
-func ParseFile(name string) (*Template, os.Error) {
+func ParseFile(name string) (*Template, error) {
 	b, err := ioutil.ReadFile(name)
 	if err != nil {
 		return nil, err

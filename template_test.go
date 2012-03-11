@@ -81,7 +81,7 @@ func testTemplates(t *testing.T, templates []templateTest) {
 	for i, test := range templates {
 		temp, err := ParseString(test.template)
 		if err != nil {
-			t.Errorf("#%d failed to parse: %s", i, err.String())
+			t.Errorf("#%d failed to parse: %s", i, err)
 		}
 		buf := bytes.NewBuffer(nil)
 		temp.Execute(buf, test.vars)

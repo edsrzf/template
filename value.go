@@ -91,7 +91,7 @@ func (b boolValue) Uint() uint64 {
 	return 0
 }
 
-func (b boolValue) Reflect() reflect.Value          { return reflect.ValueOf(b) }
+func (b boolValue) Reflect() reflect.Value         { return reflect.ValueOf(b) }
 func (b boolValue) Render(w io.Writer, c *Context) { io.WriteString(w, b.String()) }
 
 type stringValue string
@@ -99,7 +99,7 @@ type stringValue string
 func (str stringValue) Bool() bool { return str != "" }
 
 func (str stringValue) Int() int64 {
-	if i, err := strconv.Atoi64(string(str)); err == nil {
+	if i, err := strconv.ParseInt(string(str), 10, 64); err == nil {
 		return i
 	}
 	return 0
@@ -108,29 +108,29 @@ func (str stringValue) Int() int64 {
 func (str stringValue) String() string { return string(str) }
 
 func (str stringValue) Uint() uint64 {
-	if i, err := strconv.Atoui64(string(str)); err == nil {
+	if i, err := strconv.ParseUint(string(str), 10, 64); err == nil {
 		return i
 	}
 	return 0
 }
 
-func (str stringValue) Reflect() reflect.Value          { return reflect.ValueOf(str) }
+func (str stringValue) Reflect() reflect.Value         { return reflect.ValueOf(str) }
 func (str stringValue) Render(w io.Writer, c *Context) { io.WriteString(w, string(str)) }
 
 type intValue int64
 
-func (i intValue) Bool() bool                      { return i != 0 }
-func (i intValue) Int() int64                      { return int64(i) }
-func (i intValue) String() string                  { return strconv.Itoa64(int64(i)) }
-func (i intValue) Uint() uint64                    { return uint64(i) }
-func (i intValue) Reflect() reflect.Value          { return reflect.ValueOf(i) }
+func (i intValue) Bool() bool                     { return i != 0 }
+func (i intValue) Int() int64                     { return int64(i) }
+func (i intValue) String() string                 { return strconv.FormatInt(int64(i), 10) }
+func (i intValue) Uint() uint64                   { return uint64(i) }
+func (i intValue) Reflect() reflect.Value         { return reflect.ValueOf(i) }
 func (i intValue) Render(w io.Writer, c *Context) { io.WriteString(w, i.String()) }
 
 type floatValue float64
 
 func (f floatValue) Bool() bool             { return f != 0 }
 func (f floatValue) Int() int64             { return int64(f) }
-func (f floatValue) String() string         { return strconv.Ftoa64(float64(f), 'g', -1) }
+func (f floatValue) String() string         { return strconv.FormatFloat(float64(f), 'g', -1, 64) }
 func (f floatValue) Uint() uint64           { return uint64(f) }
 func (f floatValue) Reflect() reflect.Value { return reflect.ValueOf(f) }
 
@@ -143,7 +143,7 @@ func (c complexValue) Int() int64 { return 0 }
 
 func (c complexValue) String() string {
 	a, b := real(c), imag(c)
-	return strconv.Ftoa64(a, 'g', -1) + "+" + strconv.Ftoa64(b, 'g', -1) + "i"
+	return strconv.FormatFloat(a, 'g', -1, 64) + "+" + strconv.FormatFloat(b, 'g', -1, 64) + "i"
 }
 
 func (c complexValue) Uint() uint64           { return 0 }
@@ -232,6 +232,7 @@ type pointerValue struct {
 }
 
 func (p pointerValue) value() Value { return refToVal(reflect.Value(p.reflectValue).Elem()) }
+
 // TODO: correct
 func (p pointerValue) Bool() bool { return !reflect.Value(p.reflectValue).IsNil() }
 func (p pointerValue) String() string {
@@ -298,13 +299,13 @@ func lookup(v reflect.Value, s string) reflect.Value {
 		case reflect.String:
 			ret = v.MapIndex(reflect.ValueOf(s))
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			if idx, err := strconv.Atoi64(s); err == nil {
+			if idx, err := strconv.ParseInt(s, 10, 64); err == nil {
 				idxVal := reflect.New(keyt).Elem()
 				idxVal.SetInt(idx)
 				ret = v.MapIndex(idxVal)
 			}
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-			if idx, err := strconv.Atoui64(s); err == nil {
+			if idx, err := strconv.ParseUint(s, 10, 64); err == nil {
 				idxVal := reflect.New(keyt).Elem()
 				idxVal.SetUint(idx)
 				ret = v.MapIndex(idxVal)

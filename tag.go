@@ -3,7 +3,6 @@ package template
 import (
 	"bytes"
 	"io"
-	"os"
 	"reflect"
 )
 
@@ -93,7 +92,7 @@ func parseExtends(p *Parser) Node {
 
 type nilWriter int
 
-func (w nilWriter) Write(p []byte) (int, os.Error) { return len(p), nil }
+func (w nilWriter) Write(p []byte) (int, error) { return len(p), nil }
 
 func (e *extendsTag) Render(wr io.Writer, c *Context) {
 	parentValue := e.parent.Eval(c)
@@ -101,7 +100,7 @@ func (e *extendsTag) Render(wr io.Writer, c *Context) {
 	if !ok {
 		// must be a string
 		filename := parentValue.String()
-		var err os.Error
+		var err error
 		node, err = ParseFile(filename)
 		if err != nil {
 			return
@@ -307,7 +306,7 @@ func (i includeTag) Render(wr io.Writer, c *Context) {
 	if !ok {
 		// must be a string
 		filename := val.String()
-		var err os.Error
+		var err error
 		node, err = ParseFile(filename)
 		if err != nil {
 			return

@@ -3,7 +3,7 @@ package template
 import (
 	"bytes"
 	"unicode"
-	"utf8"
+	"unicode/utf8"
 )
 
 type Token int
@@ -100,7 +100,7 @@ func (t Token) Precedence() int {
 type lexer struct {
 	src       []byte
 	offset    int
-	ch        int
+	ch        rune
 	width     int
 	insideTag bool
 }
@@ -112,7 +112,7 @@ func (l *lexer) init() {
 func (l *lexer) next() {
 	l.offset += l.width
 	if l.offset < len(l.src) {
-		r, w := int(l.src[l.offset]), 1
+		r, w := rune(l.src[l.offset]), 1
 		if r >= utf8.RuneSelf {
 			r, w = utf8.DecodeRune(l.src[l.offset:])
 		}

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 	"unicode"
-	"utf8"
+	"unicode/utf8"
 )
 
 type filterFunc func(in Expr, c *Context, arg Expr) Value
@@ -66,7 +66,7 @@ func centerFilter(in Expr, c *Context, arg Expr) Value {
 		return inVal
 	}
 	str := inVal.String()
-	runes := []int(str)
+	runes := []rune(str)
 	l := len(runes)
 	if l >= count {
 		return inVal
@@ -223,7 +223,7 @@ func ljustFilter(in Expr, c *Context, arg Expr) Value {
 		return inVal
 	}
 	str := inVal.String()
-	runes := []int(str)
+	runes := []rune(str)
 	if len(runes) >= count {
 		return inVal
 	}
@@ -280,7 +280,7 @@ func rjustFilter(in Expr, c *Context, arg Expr) Value {
 		return inVal
 	}
 	str := inVal.String()
-	runes := []int(str)
+	runes := []rune(str)
 	if len(runes) >= count {
 		return inVal
 	}

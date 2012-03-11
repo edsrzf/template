@@ -3,7 +3,7 @@ package template
 import (
 	"reflect"
 	"strconv"
-	"utf8"
+	"unicode/utf8"
 )
 
 // Expr represents an expression that can be evaluated at runtime.
@@ -38,7 +38,8 @@ func (e *attrExpr) Eval(c *Context) Value {
 			// invalid; do nothing
 			return val
 		}
-		var n, i, c int
+		var n, i int
+		var c rune
 		for i, c = range str {
 			if n == idx {
 				break
